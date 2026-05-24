@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Modal,
   Pressable,
@@ -13,8 +13,9 @@ import { COLOR_BY_MULTIPLIER } from '../types/game';
 interface Props {
   visible: boolean;
   currentValue: number | null;
+  currentSpecial?: boolean;
   title?: string;
-  onSelect: (value: number) => void;
+  onSelect: (value: number, isSpecial: boolean) => void;
   onClear?: () => void;
   onClose: () => void;
 }
@@ -24,14 +25,21 @@ const OPTIONS = [3, 4, 5, 6];
 export const ColorPickerModal: React.FC<Props> = ({
   visible,
   currentValue,
+  currentSpecial = false,
   title = 'Tur Rengini Seç',
   onSelect,
   onClear,
   onClose,
 }) => {
+  const [isSpecial, setIsSpecial] = useState(false);
+
+  useEffect(() => {
+    if (visible) setIsSpecial(currentSpecial);
+  }, [visible, currentSpecial]);
+
   const handlePick = (v: number) => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    onSelect(v);
+    onSelect(v, isSpecial);
     onClose();
   };
 
@@ -40,6 +48,11 @@ export const ColorPickerModal: React.FC<Props> = ({
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     onClear();
     onClose();
+  };
+
+  const toggleMode = (special: boolean) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setIsSpecial(special);
   };
 
   return (
@@ -53,8 +66,47 @@ export const ColorPickerModal: React.FC<Props> = ({
         <Pressable style={styles.card} onPress={() => {}}>
           <Text style={styles.title}>{title}</Text>
           <Text style={styles.subtitle}>
-            Bu turdaki ceza çarpanı (kimse bitmese bile)
+            {isSpecial
+              ? 'Özel bitiş: kazanan ×100, kaybedenler ×2 ceza'
+              : 'Normal bitiş: kazanan ×-10, kaybedenler ×renk'}
           </Text>
+
+          <View style={styles.modeToggle}>
+            <Pressable
+              onPress={() => toggleMode(false)}
+              style={({ pressed }) => [
+                styles.modeBtn,
+                !isSpecial && styles.modeBtnActive,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.modeBtnText,
+                  !isSpecial && styles.modeBtnTextActive,
+                ]}
+              >
+                Normal Bitiş
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => toggleMode(true)}
+              style={({ pressed }) => [
+                styles.modeBtn,
+                isSpecial && styles.modeBtnActiveSpecial,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.modeBtnText,
+                  isSpecial && styles.modeBtnTextActive,
+                ]}
+              >
+                ⭐ Özel Bitiş
+              </Text>
+            </Pressable>
+          </View>
 
           <View style={styles.grid}>
             {OPTIONS.map((v) => {
@@ -87,6 +139,14 @@ export const ColorPickerModal: React.FC<Props> = ({
                     ]}
                   >
                     {info.name}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.colorSub,
+                      v === 6 && styles.colorTextDark,
+                    ]}
+                  >
+                    {isSpecial ? `×${v * 2} / +${v * 100}` : `×${v}`}
                   </Text>
                 </Pressable>
               );
@@ -123,6 +183,8 @@ export const ColorPickerModal: React.FC<Props> = ({
   );
 };
 
+const SPECIAL_COLOR = '#FBBF24';
+
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
@@ -148,7 +210,38 @@ const styles = StyleSheet.create({
   subtitle: {
     ...typography.caption,
     color: colors.textMuted,
+    marginBottom: spacing.md,
+  },
+  modeToggle: {
+    flexDirection: 'row',
+    gap: spacing.sm,
     marginBottom: spacing.lg,
+  },
+  modeBtn: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+  },
+  modeBtnActive: {
+    backgroundColor: colors.accentMuted,
+    borderColor: colors.accent,
+  },
+  modeBtnActiveSpecial: {
+    backgroundColor: SPECIAL_COLOR + '33',
+    borderColor: SPECIAL_COLOR,
+  },
+  modeBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.textSecondary,
+    letterSpacing: 0.5,
+  },
+  modeBtnTextActive: {
+    color: colors.textPrimary,
   },
   grid: {
     flexDirection: 'row',
@@ -180,6 +273,13 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     letterSpacing: 1,
     marginTop: 2,
+  },
+  colorSub: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginTop: 4,
+    opacity: 0.85,
   },
   colorTextDark: {
     color: '#0F1419',

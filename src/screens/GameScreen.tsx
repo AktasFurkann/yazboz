@@ -57,11 +57,19 @@ export const GameScreen: React.FC = () => {
     colorTopColumns,
     hasColorTopInRound,
     roundMultipliers,
+    specialFinishes,
+    currentRoundIsSpecial,
   } = useGameContext();
 
   const multipliersByRound = React.useMemo(
-    () => computeMultipliersByRound(columns, mode, roundMultipliers),
-    [columns, mode, roundMultipliers]
+    () =>
+      computeMultipliersByRound(
+        columns,
+        mode,
+        roundMultipliers,
+        specialFinishes
+      ),
+    [columns, mode, roundMultipliers, specialFinishes]
   );
 
   const goToResult = useCallback(() => {
@@ -86,8 +94,8 @@ export const GameScreen: React.FC = () => {
   }, []);
 
   const handleSelectRoundColor = useCallback(
-    (value: number) => {
-      setRoundColor(value);
+    (value: number, isSpecial: boolean) => {
+      setRoundColor(value, isSpecial);
     },
     [setRoundColor]
   );
@@ -219,8 +227,8 @@ export const GameScreen: React.FC = () => {
     viewingRound < maxRound || isCurrentRoundComplete;
 
   const handleColorPick = useCallback(
-    (value: number) => {
-      setColorWinner(value);
+    (value: number, isSpecial: boolean) => {
+      setColorWinner(value, isSpecial);
     },
     [setColorWinner]
   );
@@ -267,7 +275,13 @@ export const GameScreen: React.FC = () => {
                   style={[styles.colorBadgeText, { color: colorInfo.hex }]}
                 >
                   {colorInfo.name} ×{colorInfo.multiplier}
+                  {currentRoundIsSpecial ? ' (2x)' : ''}
                 </Text>
+              </View>
+            )}
+            {currentRoundIsSpecial && (
+              <View style={styles.specialBadge}>
+                <Text style={styles.specialBadgeText}>⭐ ÖZEL</Text>
               </View>
             )}
             <Text style={styles.cellTag} numberOfLines={1}>
@@ -379,6 +393,7 @@ export const GameScreen: React.FC = () => {
               (hasColorTopInRound || hasRoundColor)
             }
             multipliersByRound={multipliersByRound}
+            specialFinishes={specialFinishes}
             onSelect={handleSelect}
             onEditName={handleEditName}
             onPreviewStart={handlePreviewStart}
@@ -399,6 +414,7 @@ export const GameScreen: React.FC = () => {
           onColorPick={handleColorPick}
           onColorClear={handleColorClear}
           canClearColor={hasColorWinner}
+          currentSpecial={currentRoundIsSpecial}
           hasRoundColor={mode !== 'renkli-klasik' || hasRoundColor}
           onOpenRoundColor={handleOpenColorPicker}
         />
@@ -425,6 +441,7 @@ export const GameScreen: React.FC = () => {
       <ColorPickerModal
         visible={colorPickerOpen}
         currentValue={currentRoundColor}
+        currentSpecial={currentRoundIsSpecial}
         title={
           pendingAdvance
             ? `Tur ${viewingRound} bitsin · Renk Seç`
@@ -515,6 +532,20 @@ const styles = StyleSheet.create({
   },
   colorDot: { width: 8, height: 8, borderRadius: 4 },
   colorBadgeText: { fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },
+  specialBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    backgroundColor: '#FBBF2433',
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: '#FBBF24',
+  },
+  specialBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#FBBF24',
+    letterSpacing: 0.5,
+  },
   cellTag: { ...typography.caption, color: colors.accent },
   headerActions: { flexDirection: 'row', gap: spacing.xs },
   iconBtn: {

@@ -13,6 +13,7 @@ interface Props {
   selectedSide: Side | null;
   topLocked?: boolean;
   multipliersByRound?: Record<number, number>;
+  specialFinishes?: Record<number, boolean>;
   onSelect: (column: ColumnId, side: Side) => void;
   onEditName?: (column: ColumnId) => void;
   onPreviewStart?: (column: ColumnId, side: Side) => void;
@@ -22,9 +23,19 @@ interface Props {
 const formatNumbersComma = (values: number[]): string =>
   values.length === 0 ? '–' : values.join(',');
 
-const extractTopValues = (
-  top: { value: number; round: number }[]
-): number[] => top.map((t) => t.value);
+const isColor = (v: number) => v >= 3 && v <= 6;
+
+const formatTopDisplay = (
+  top: { value: number; round: number }[],
+  specialFinishes?: Record<number, boolean>
+): string => {
+  if (top.length === 0) return '–';
+  return top
+    .map((t) =>
+      specialFinishes?.[t.round] && isColor(t.value) ? t.value * 100 : t.value
+    )
+    .join(',');
+};
 
 const ColumnViewComponent: React.FC<Props> = ({
   index,
@@ -35,6 +46,7 @@ const ColumnViewComponent: React.FC<Props> = ({
   selectedSide,
   topLocked = false,
   multipliersByRound,
+  specialFinishes,
   onSelect,
   onEditName,
   onPreviewStart,
@@ -103,7 +115,7 @@ const ColumnViewComponent: React.FC<Props> = ({
           numberOfLines={2}
           ellipsizeMode="tail"
         >
-          {formatNumbersComma(extractTopValues(column.top))}
+          {formatTopDisplay(column.top, specialFinishes)}
         </Text>
       </Pressable>
 

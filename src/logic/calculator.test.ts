@@ -129,6 +129,55 @@ const tests: Array<[string, () => void]> = [
       expect(cols[0]).toEqual({ top: [], bottom: [] });
     },
   ],
+  [
+    'ozel bitis: kazanan ust=5 → -500, kaybeden alt=10 → 10×10=100',
+    () => {
+      const columns: Column[] = [
+        { top: [t(5, 1)], bottom: [] }, // winner with Siyah(5)
+        { top: [], bottom: [b(10, 1)] }, // loser with 10
+        { top: [], bottom: [] },
+        { top: [], bottom: [] },
+      ];
+      const r = calculateGame(
+        columns,
+        'renkli-klasik',
+        null,
+        1,
+        {}, // roundMultipliers
+        { 1: true } // specialFinishes
+      );
+      // Winner: 5 × -100 = -500
+      expect(r.columns[0].net).toEqual(-500);
+      // Loser: 10 × (5 × 2) = 100
+      expect(r.columns[1].net).toEqual(100);
+    },
+  ],
+  [
+    'ozel bitis vs normal: kontrol',
+    () => {
+      const columns: Column[] = [
+        { top: [t(5, 1)], bottom: [] },
+        { top: [], bottom: [b(10, 1)] },
+        { top: [], bottom: [] },
+        { top: [], bottom: [] },
+      ];
+      const rNormal = calculateGame(columns, 'renkli-klasik', null, 1, {}, {});
+      const rSpecial = calculateGame(
+        columns,
+        'renkli-klasik',
+        null,
+        1,
+        {},
+        { 1: true }
+      );
+      // Normal: winner -50, loser 50
+      expect(rNormal.columns[0].net).toEqual(-50);
+      expect(rNormal.columns[1].net).toEqual(50);
+      // Special: winner -500, loser 100
+      expect(rSpecial.columns[0].net).toEqual(-500);
+      expect(rSpecial.columns[1].net).toEqual(100);
+    },
+  ],
 ];
 
 let passed = 0;

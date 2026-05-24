@@ -80,6 +80,9 @@ export const useGame = () => {
   const [roundMultipliers, setRoundMultipliers] = useState<
     Record<number, number>
   >({});
+  const [specialFinishes, setSpecialFinishes] = useState<
+    Record<number, boolean>
+  >({});
 
   useEffect(() => {
     loadMode().then(setModeState);
@@ -87,8 +90,15 @@ export const useGame = () => {
 
   const result = useMemo(
     () =>
-      calculateGame(columns, mode, winnerHint, viewingRound, roundMultipliers),
-    [columns, mode, winnerHint, viewingRound, roundMultipliers]
+      calculateGame(
+        columns,
+        mode,
+        winnerHint,
+        viewingRound,
+        roundMultipliers,
+        specialFinishes
+      ),
+    [columns, mode, winnerHint, viewingRound, roundMultipliers, specialFinishes]
   );
 
   const updateWinnerHint = useCallback(
@@ -194,6 +204,7 @@ export const useGame = () => {
     setMaxRound(1);
     setViewingRound(1);
     setRoundMultipliers({});
+    setSpecialFinishes({});
   }, []);
 
   const select = useCallback((column: ColumnId, side: Side) => {
@@ -241,7 +252,7 @@ export const useGame = () => {
   }, [maxRound]);
 
   const setColorWinner = useCallback(
-    (colorValue: number) => {
+    (colorValue: number, isSpecial: boolean = false) => {
       const colIdx = selection.column;
       setColumns((prev) =>
         prev.map((c, idx) => {
@@ -269,6 +280,12 @@ export const useGame = () => {
       );
       setWinnerHint(colIdx);
       setRoundMultipliers((prev) => ({ ...prev, [viewingRound]: colorValue }));
+      setSpecialFinishes((prev) => {
+        const next = { ...prev };
+        if (isSpecial) next[viewingRound] = true;
+        else delete next[viewingRound];
+        return next;
+      });
     },
     [selection.column, viewingRound]
   );
@@ -293,17 +310,33 @@ export const useGame = () => {
       delete next[viewingRound];
       return next;
     });
+    setSpecialFinishes((prev) => {
+      const next = { ...prev };
+      delete next[viewingRound];
+      return next;
+    });
   }, [selection.column, viewingRound, winnerHint]);
 
   const setRoundColor = useCallback(
-    (colorValue: number) => {
+    (colorValue: number, isSpecial: boolean = false) => {
       setRoundMultipliers((prev) => ({ ...prev, [viewingRound]: colorValue }));
+      setSpecialFinishes((prev) => {
+        const next = { ...prev };
+        if (isSpecial) next[viewingRound] = true;
+        else delete next[viewingRound];
+        return next;
+      });
     },
     [viewingRound]
   );
 
   const clearRoundColor = useCallback(() => {
     setRoundMultipliers((prev) => {
+      const next = { ...prev };
+      delete next[viewingRound];
+      return next;
+    });
+    setSpecialFinishes((prev) => {
       const next = { ...prev };
       delete next[viewingRound];
       return next;
@@ -326,6 +359,8 @@ export const useGame = () => {
   );
 
   const hasRoundColor = currentRoundColor !== null;
+
+  const currentRoundIsSpecial = specialFinishes[viewingRound] ?? false;
 
   const isCurrentRoundComplete = useMemo(
     () =>
@@ -377,6 +412,7 @@ export const useGame = () => {
       setMaxRound(1);
       setViewingRound(1);
       setRoundMultipliers({});
+      setSpecialFinishes({});
       if (names) setAllPlayerNames(names);
       if (gameMode) setMode(gameMode);
     },
@@ -445,6 +481,8 @@ export const useGame = () => {
     currentRoundNeedsColor,
     colorTopColumns,
     hasColorTopInRound,
+    specialFinishes,
+    currentRoundIsSpecial,
   };
 };
 

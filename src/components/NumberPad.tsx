@@ -13,9 +13,10 @@ interface Props {
   draft: string;
   onDraftChange: (next: string) => void;
   variant?: 'digit' | 'color';
-  onColorPick?: (value: number) => void;
+  onColorPick?: (value: number, isSpecial: boolean) => void;
   onColorClear?: () => void;
   canClearColor?: boolean;
+  currentSpecial?: boolean;
   hasRoundColor?: boolean;
   onOpenRoundColor?: () => void;
 }
@@ -49,16 +50,27 @@ const NumberPadComponent: React.FC<Props> = ({
   onColorPick,
   onColorClear,
   canClearColor = false,
+  currentSpecial = false,
   hasRoundColor = false,
   onOpenRoundColor,
 }) => {
   const [collapsed, setCollapsed] = useState(false);
+  const [isSpecialMode, setIsSpecialMode] = useState(false);
 
   const isColorMode = variant === 'color';
 
+  React.useEffect(() => {
+    if (isColorMode) setIsSpecialMode(currentSpecial);
+  }, [isColorMode, currentSpecial]);
+
   const handleColorPick = (value: number) => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    onColorPick?.(value);
+    onColorPick?.(value, isSpecialMode);
+  };
+
+  const toggleSpecialMode = (special: boolean) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setIsSpecialMode(special);
   };
 
   const handleColorClear = () => {
@@ -127,7 +139,9 @@ const NumberPadComponent: React.FC<Props> = ({
     return (
       <View style={styles.container}>
         <View style={styles.colorHeader}>
-          <Text style={styles.colorTitle}>Kazanan Rengi Seç</Text>
+          <Text style={styles.colorTitle}>
+            {isSpecialMode ? '⭐ Özel Bitiş' : 'Kazanan Rengi Seç'}
+          </Text>
           <View style={styles.colorHeaderActions}>
             <Pressable
               onPress={handleColorClear}
@@ -193,6 +207,43 @@ const NumberPadComponent: React.FC<Props> = ({
               </Pressable>
             );
           })}
+        </View>
+
+        <View style={styles.modeToggleRow}>
+          <Pressable
+            onPress={() => toggleSpecialMode(false)}
+            style={({ pressed }) => [
+              styles.modeBtn,
+              !isSpecialMode && styles.modeBtnActive,
+              pressed && styles.pressed,
+            ]}
+          >
+            <Text
+              style={[
+                styles.modeBtnText,
+                !isSpecialMode && styles.modeBtnTextActive,
+              ]}
+            >
+              Normal Bitiş
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={() => toggleSpecialMode(true)}
+            style={({ pressed }) => [
+              styles.modeBtn,
+              isSpecialMode && styles.modeBtnActiveSpecial,
+              pressed && styles.pressed,
+            ]}
+          >
+            <Text
+              style={[
+                styles.modeBtnText,
+                isSpecialMode && styles.modeBtnTextActive,
+              ]}
+            >
+              ⭐ Özel Bitiş
+            </Text>
+          </Pressable>
         </View>
       </View>
     );
@@ -576,6 +627,37 @@ const styles = StyleSheet.create({
   },
   colorBtnNameDark: {
     color: '#0F1419',
+  },
+  modeToggleRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  modeBtn: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+  },
+  modeBtnActive: {
+    backgroundColor: colors.accentMuted,
+    borderColor: colors.accent,
+  },
+  modeBtnActiveSpecial: {
+    backgroundColor: '#FBBF2433',
+    borderColor: '#FBBF24',
+  },
+  modeBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.textSecondary,
+    letterSpacing: 0.5,
+  },
+  modeBtnTextActive: {
+    color: colors.textPrimary,
   },
 });
 

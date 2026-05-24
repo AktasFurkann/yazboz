@@ -47,6 +47,7 @@ export interface SavedGame {
   result: GameResult;
   playerNames?: string[];
   roundMultipliers?: Record<number, number>;
+  specialFinishes?: Record<number, boolean>;
   label?: string;
 }
 

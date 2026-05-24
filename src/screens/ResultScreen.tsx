@@ -45,6 +45,7 @@ export const ResultScreen: React.FC = () => {
     mode: ctxMode,
     playerNames: ctxPlayerNames,
     roundMultipliers: ctxRoundMultipliers,
+    specialFinishes: ctxSpecialFinishes,
     resetAll,
   } = useGameContext();
 
@@ -63,6 +64,8 @@ export const ResultScreen: React.FC = () => {
     ];
   const roundMultipliers =
     (isHistorical ? savedGame.roundMultipliers : ctxRoundMultipliers) ?? {};
+  const specialFinishes =
+    (isHistorical ? savedGame.specialFinishes : ctxSpecialFinishes) ?? {};
   const title = isHistorical ? 'Geçmiş Oyun' : 'Sonuç';
   const colorInfo = COLOR_BY_MULTIPLIER[result.multiplier];
 
@@ -94,6 +97,7 @@ export const ResultScreen: React.FC = () => {
       result,
       playerNames,
       roundMultipliers,
+      specialFinishes,
     };
     await saveGame(game);
     resetAll();
@@ -117,10 +121,19 @@ export const ResultScreen: React.FC = () => {
 
   const roundCards = useMemo(
     () =>
-      roundSummaries.map((rs) => (
+      roundSummaries.map((rs) => {
+        const isSpecial = specialFinishes[rs.round] ?? false;
+        return (
         <View key={rs.round} style={styles.roundCard}>
           <View style={styles.roundHeader}>
-            <Text style={styles.roundTitle}>{rs.round}. Tur</Text>
+            <View style={styles.roundTitleRow}>
+              <Text style={styles.roundTitle}>{rs.round}. Tur</Text>
+              {isSpecial && (
+                <View style={styles.specialBadge}>
+                  <Text style={styles.specialBadgeText}>⭐ ÖZEL</Text>
+                </View>
+              )}
+            </View>
             {rs.colorHex && rs.colorName && (
               <View
                 style={[
@@ -136,6 +149,7 @@ export const ResultScreen: React.FC = () => {
                 />
                 <Text style={[styles.colorBadgeText, { color: rs.colorHex }]}>
                   {rs.colorName} ×{rs.multiplier}
+                  {isSpecial ? ' (2x)' : ''}
                 </Text>
               </View>
             )}
@@ -175,8 +189,9 @@ export const ResultScreen: React.FC = () => {
             );
           })}
         </View>
-      )),
-    [roundSummaries]
+        );
+      }),
+    [roundSummaries, specialFinishes]
   );
 
   const cards = useMemo(
@@ -381,10 +396,29 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderColor: colors.divider,
   },
+  roundTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   roundTitle: {
     ...typography.heading,
     color: colors.accent,
     fontWeight: '800',
+  },
+  specialBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    backgroundColor: '#FBBF2433',
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#FBBF24',
+  },
+  specialBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#FBBF24',
+    letterSpacing: 1,
   },
   playerRow: {
     flexDirection: 'row',

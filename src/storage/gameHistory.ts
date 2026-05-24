@@ -25,6 +25,7 @@ type LegacyGame = Omit<SavedGame, 'columns' | 'mode'> & {
   columns: LegacyColumn[];
   mode?: SavedGame['mode'];
   roundMultipliers?: Record<number, number>;
+  specialFinishes?: Record<number, boolean>;
   playerNames?: string[];
 };
 
@@ -56,6 +57,7 @@ const migrateGame = (game: LegacyGame): SavedGame => ({
     'Oyuncu 4',
   ],
   roundMultipliers: game.roundMultipliers ?? {},
+  specialFinishes: game.specialFinishes ?? {},
 });
 
 export const loadHistory = async (): Promise<SavedGame[]> => {

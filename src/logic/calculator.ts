@@ -9,7 +9,10 @@ import {
   TopEntry,
 } from '../types/game';
 
-const TOP_MULTIPLIER = -10;
+export const TOP_MULTIPLIER = -10;
+export const SPECIAL_TOP_MULTIPLIER = -100;
+export const SPECIAL_BOTTOM_BONUS = 2;
+export const SPECIAL_TOP_DISPLAY_FACTOR = 100;
 
 const isColorMultiplier = (n: number): boolean =>
   n === 3 || n === 4 || n === 5 || n === 6;
@@ -55,15 +58,28 @@ const collectRounds = (columns: Column[]): number[] => {
 
 const calculateColumn = (
   column: Column,
-  multByRound: Map<number, number>
+  multByRound: Map<number, number>,
+  specialFinishes: Record<number, boolean> = {}
 ): ColumnResult => {
   const topSum = column.top.reduce((acc, t) => acc + t.value, 0);
   const bottomSum = column.bottom.reduce((acc, e) => acc + e.value, 0);
-  const bottomWeighted = column.bottom.reduce((acc, e) => {
-    const m = multByRound.get(e.round) ?? 1;
-    return acc + e.value * m;
+
+  const topContribution = column.top.reduce((acc, t) => {
+    const isColor = isColorMultiplier(t.value);
+    const factor =
+      specialFinishes[t.round] && isColor
+        ? SPECIAL_TOP_MULTIPLIER
+        : TOP_MULTIPLIER;
+    return acc + t.value * factor;
   }, 0);
-  const net = topSum * TOP_MULTIPLIER + bottomWeighted;
+
+  const bottomContribution = column.bottom.reduce((acc, e) => {
+    const base = multByRound.get(e.round) ?? 1;
+    const bonus = specialFinishes[e.round] ? SPECIAL_BOTTOM_BONUS : 1;
+    return acc + e.value * base * bonus;
+  }, 0);
+
+  const net = topContribution + bottomContribution;
   return { topSum, bottomSum, net };
 };
 
@@ -72,7 +88,8 @@ export const calculateGame = (
   mode: GameMode = 'klasik',
   winnerHint: ColumnId | null = null,
   viewingRound: number = 1,
-  roundMultipliers: Record<number, number> = {}
+  roundMultipliers: Record<number, number> = {},
+  specialFinishes: Record<number, boolean> = {}
 ): GameResult => {
   const rounds = collectRounds(columns);
   if (!rounds.includes(viewingRound)) rounds.push(viewingRound);
@@ -94,7 +111,9 @@ export const calculateGame = (
     }
   }
 
-  const results = columns.map((col) => calculateColumn(col, multByRound));
+  const results = columns.map((col) =>
+    calculateColumn(col, multByRound, specialFinishes)
+  );
   const grandTotal = results.reduce((acc, r) => acc + r.net, 0);
   const activeMultiplier = multByRound.get(viewingRound) ?? 1;
   const colorInfo = COLOR_BY_MULTIPLIER[activeMultiplier];
@@ -155,7 +174,8 @@ export const columnHasColorTopInRound = (
 export const computeMultipliersByRound = (
   columns: Column[],
   mode: GameMode,
-  roundMultipliers: Record<number, number> = {}
+  roundMultipliers: Record<number, number> = {},
+  specialFinishes: Record<number, boolean> = {}
 ): Record<number, number> => {
   const result: Record<number, number> = {};
   const allRounds = new Set<number>();
@@ -167,10 +187,11 @@ export const computeMultipliersByRound = (
     allRounds.add(Number(k));
   }
   for (const r of allRounds) {
-    result[r] =
+    const base =
       mode === 'renkli-klasik'
         ? detectMultiplierForRound(columns, r, null, roundMultipliers)
         : 1;
+    result[r] = specialFinishes[r] ? base * SPECIAL_BOTTOM_BONUS : base;
   }
   return result;
 };
