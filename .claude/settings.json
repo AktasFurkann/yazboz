@@ -1,4 +1,10 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(npx --yes eas-cli@latest --version)",
+      "Bash(npx --yes eas-cli@latest whoami)"
+    ]
+  },
   "enabledPlugins": {
     "expo@claude-plugins-official": true
   }
