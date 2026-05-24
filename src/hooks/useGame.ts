@@ -66,6 +66,7 @@ export const useGame = () => {
     createEmptyColumns(COLUMN_COUNT)
   );
   const [selection, setSelection] = useState<GameSelection>(initialSelection);
+  const [selectionActive, setSelectionActive] = useState<boolean>(false);
   const [mode, setModeState] = useState<GameMode>('klasik');
   const [winnerHint, setWinnerHint] = useState<ColumnId | null>(null);
   const [maxRound, setMaxRound] = useState(1);
@@ -188,6 +189,7 @@ export const useGame = () => {
   const resetAll = useCallback(() => {
     setColumns(createEmptyColumns(COLUMN_COUNT));
     setSelection(initialSelection);
+    setSelectionActive(false);
     setWinnerHint(null);
     setMaxRound(1);
     setViewingRound(1);
@@ -196,6 +198,11 @@ export const useGame = () => {
 
   const select = useCallback((column: ColumnId, side: Side) => {
     setSelection({ column, side });
+    setSelectionActive(true);
+  }, []);
+
+  const deselect = useCallback(() => {
+    setSelectionActive(false);
   }, []);
 
   const goToNext = useCallback((): boolean => {
@@ -219,6 +226,7 @@ export const useGame = () => {
       setViewingRound(r);
       setWinnerHint(null);
       setSelection(initialSelection);
+      setSelectionActive(false);
     },
     [maxRound]
   );
@@ -229,6 +237,7 @@ export const useGame = () => {
     setViewingRound(next);
     setWinnerHint(null);
     setSelection(initialSelection);
+    setSelectionActive(false);
   }, [maxRound]);
 
   const setColorWinner = useCallback(
@@ -363,6 +372,7 @@ export const useGame = () => {
     (names?: string[], gameMode?: GameMode) => {
       setColumns(createEmptyColumns(COLUMN_COUNT));
       setSelection(initialSelection);
+      setSelectionActive(false);
       setWinnerHint(null);
       setMaxRound(1);
       setViewingRound(1);
@@ -398,6 +408,7 @@ export const useGame = () => {
   return {
     columns,
     selection,
+    selectionActive,
     result,
     mode,
     viewingRound,
@@ -413,6 +424,7 @@ export const useGame = () => {
     clearCurrentCell,
     resetAll,
     select,
+    deselect,
     goToNext,
     setMode,
     cycleMode,

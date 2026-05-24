@@ -152,6 +152,29 @@ export const columnHasColorTopInRound = (
     (t) => t.round === round && t.value >= 3 && t.value <= 6
   );
 
+export const computeMultipliersByRound = (
+  columns: Column[],
+  mode: GameMode,
+  roundMultipliers: Record<number, number> = {}
+): Record<number, number> => {
+  const result: Record<number, number> = {};
+  const allRounds = new Set<number>();
+  for (const c of columns) {
+    c.top.forEach((t) => allRounds.add(t.round));
+    c.bottom.forEach((e) => allRounds.add(e.round));
+  }
+  for (const k of Object.keys(roundMultipliers)) {
+    allRounds.add(Number(k));
+  }
+  for (const r of allRounds) {
+    result[r] =
+      mode === 'renkli-klasik'
+        ? detectMultiplierForRound(columns, r, null, roundMultipliers)
+        : 1;
+  }
+  return result;
+};
+
 export const roundHasAnyData = (
   columns: Column[],
   round: number

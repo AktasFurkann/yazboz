@@ -12,6 +12,7 @@ interface Props {
   isSelected: boolean;
   selectedSide: Side | null;
   topLocked?: boolean;
+  multipliersByRound?: Record<number, number>;
   onSelect: (column: ColumnId, side: Side) => void;
   onEditName?: (column: ColumnId) => void;
   onPreviewStart?: (column: ColumnId, side: Side) => void;
@@ -33,6 +34,7 @@ const ColumnViewComponent: React.FC<Props> = ({
   isSelected,
   selectedSide,
   topLocked = false,
+  multipliersByRound,
   onSelect,
   onEditName,
   onPreviewStart,
@@ -119,15 +121,17 @@ const ColumnViewComponent: React.FC<Props> = ({
           {column.bottom.length === 0 ? (
             <Text style={[styles.bottomItem, styles.empty]}>–</Text>
           ) : (
-            column.bottom.map((e, idx) =>
-              e.marker === 'finished' ? (
-                <View key={idx} style={styles.finishedLine} />
-              ) : (
+            column.bottom.map((e, idx) => {
+              if (e.marker === 'finished') {
+                return <View key={idx} style={styles.finishedLine} />;
+              }
+              const mult = multipliersByRound?.[e.round] ?? 1;
+              return (
                 <Text key={idx} style={styles.bottomItem}>
-                  {e.value}
+                  {e.value * mult}
                 </Text>
-              )
-            )
+              );
+            })
           )}
         </View>
 

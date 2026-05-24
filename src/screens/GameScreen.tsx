@@ -15,6 +15,7 @@ import { NumberPad, parseDraft } from '../components/NumberPad';
 import { BannerSlot } from '../components/BannerSlot';
 import { EditNameModal } from '../components/EditNameModal';
 import { ColorPickerModal } from '../components/ColorPickerModal';
+import { computeMultipliersByRound } from '../logic/calculator';
 import { useGameContext } from '../contexts/GameContext';
 import { colors, radius, spacing, typography } from '../theme';
 import { COLUMN_IDS, COLOR_BY_MULTIPLIER, MODE_LABEL } from '../types/game';
@@ -27,6 +28,7 @@ export const GameScreen: React.FC = () => {
   const {
     columns,
     selection,
+    selectionActive,
     result,
     mode,
     viewingRound,
@@ -54,7 +56,13 @@ export const GameScreen: React.FC = () => {
     currentRoundNeedsColor,
     colorTopColumns,
     hasColorTopInRound,
+    roundMultipliers,
   } = useGameContext();
+
+  const multipliersByRound = React.useMemo(
+    () => computeMultipliersByRound(columns, mode, roundMultipliers),
+    [columns, mode, roundMultipliers]
+  );
 
   const goToResult = useCallback(() => {
     if (isEmpty) {
@@ -145,13 +153,23 @@ export const GameScreen: React.FC = () => {
   const [draft, setDraft] = useState('');
 
   const flushDraftToCurrent = useCallback(() => {
+    if (!selectionActive) {
+      if (draft.length > 0) setDraft('');
+      return;
+    }
     if (draft.length === 0) return;
     const values = parseDraft(draft);
     if (values.length > 0) {
       addNumbers(values);
     }
     setDraft('');
-  }, [draft, addNumbers]);
+  }, [draft, addNumbers, selectionActive]);
+
+  useEffect(() => {
+    if (!selectionActive && draft.length > 0) {
+      setDraft('');
+    }
+  }, [selectionActive, draft.length]);
 
   const handleSelect = useCallback(
     (col: ColumnId, side: Side) => {
@@ -253,8 +271,11 @@ export const GameScreen: React.FC = () => {
               </View>
             )}
             <Text style={styles.cellTag} numberOfLines={1}>
-              {playerNames[selection.column]} ·{' '}
-              {selection.side === 'top' ? 'Üst' : 'Alt'}
+              {selectionActive
+                ? `${playerNames[selection.column]} · ${
+                    selection.side === 'top' ? 'Üst' : 'Alt'
+                  }`
+                : 'bir hücreye dokun'}
             </Text>
           </View>
         </View>
@@ -348,13 +369,16 @@ export const GameScreen: React.FC = () => {
             column={columns[id]}
             result={result.columns[id]}
             name={playerNames[id]}
-            isSelected={selection.column === id}
-            selectedSide={selection.column === id ? selection.side : null}
+            isSelected={selectionActive && selection.column === id}
+            selectedSide={
+              selectionActive && selection.column === id ? selection.side : null
+            }
             topLocked={
               mode === 'renkli-klasik' &&
               !colorTopColumns[id] &&
               (hasColorTopInRound || hasRoundColor)
             }
+            multipliersByRound={multipliersByRound}
             onSelect={handleSelect}
             onEditName={handleEditName}
             onPreviewStart={handlePreviewStart}
@@ -363,20 +387,28 @@ export const GameScreen: React.FC = () => {
         ))}
       </View>
 
-      <NumberPad
-        onClearCell={handleClearCell}
-        onUndoLast={removeLast}
-        canUndo={currentCellHasInRound}
-        onAdd={handleAdd}
-        draft={draft}
-        onDraftChange={setDraft}
-        variant={isColorMode ? 'color' : 'digit'}
-        onColorPick={handleColorPick}
-        onColorClear={handleColorClear}
-        canClearColor={hasColorWinner}
-        hasRoundColor={mode !== 'renkli-klasik' || hasRoundColor}
-        onOpenRoundColor={handleOpenColorPicker}
-      />
+      {selectionActive ? (
+        <NumberPad
+          onClearCell={handleClearCell}
+          onUndoLast={removeLast}
+          canUndo={currentCellHasInRound}
+          onAdd={handleAdd}
+          draft={draft}
+          onDraftChange={setDraft}
+          variant={isColorMode ? 'color' : 'digit'}
+          onColorPick={handleColorPick}
+          onColorClear={handleColorClear}
+          canClearColor={hasColorWinner}
+          hasRoundColor={mode !== 'renkli-klasik' || hasRoundColor}
+          onOpenRoundColor={handleOpenColorPicker}
+        />
+      ) : (
+        <View style={styles.selectHintBar}>
+          <Text style={styles.selectHintText}>
+            ✋ Veri girmek için bir hücreye dokun
+          </Text>
+        </View>
+      )}
 
       <BannerSlot />
 
@@ -411,13 +443,20 @@ export const GameScreen: React.FC = () => {
           <View style={styles.previewCard}>
             <Text style={styles.previewTitle}>
               {playerNames[preview.column]} ·{' '}
-              {preview.side === 'top' ? 'ÜST (×-10)' : 'ALT'}
+              {preview.side === 'top'
+                ? 'ÜST (×-10)'
+                : mode === 'renkli-klasik'
+                ? 'ALT (çarpanlı)'
+                : 'ALT'}
             </Text>
             <Text style={styles.previewValues}>
               {preview.side === 'top'
                 ? columns[preview.column].top.map((t) => t.value).join(', ')
                 : columns[preview.column].bottom
-                    .map((e) => e.value)
+                    .filter((e) => e.marker !== 'finished')
+                    .map(
+                      (e) => e.value * (multipliersByRound[e.round] ?? 1)
+                    )
                     .join(', ')}
             </Text>
             <Text style={styles.previewCount}>
@@ -574,6 +613,19 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   pressed: { opacity: 0.6 },
+  selectHintBar: {
+    backgroundColor: colors.surface,
+    borderTopWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  selectHintText: {
+    ...typography.body,
+    color: colors.textMuted,
+    letterSpacing: 0.5,
+  },
   previewOverlay: {
     position: 'absolute',
     top: 0,
