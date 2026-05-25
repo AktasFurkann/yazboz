@@ -19,7 +19,8 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Button } from '../components/Button';
 import { BannerSlot } from '../components/BannerSlot';
 import { useGameContext } from '../contexts/GameContext';
-import { colors, radius, spacing, typography } from '../theme';
+import { radius, spacing, ThemeColors, typography } from '../theme';
+import { useThemedStyles } from '../contexts/ThemeContext';
 import { saveGame } from '../storage/gameHistory';
 import { COLOR_BY_MULTIPLIER, MODE_LABEL, SavedGame } from '../types/game';
 import { buildRoundSummaries } from '../logic/calculator';
@@ -66,6 +67,8 @@ export const ResultScreen: React.FC = () => {
     (isHistorical ? savedGame.roundMultipliers : ctxRoundMultipliers) ?? {};
   const specialFinishes =
     (isHistorical ? savedGame.specialFinishes : ctxSpecialFinishes) ?? {};
+
+  const styles = useThemedStyles(makeStyles);
   const title = isHistorical ? 'Geçmiş Oyun' : 'Sonuç';
   const colorInfo = COLOR_BY_MULTIPLIER[result.multiplier];
 
@@ -304,10 +307,10 @@ export const ResultScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: c.background,
   },
   header: {
     flexDirection: 'row',
@@ -316,7 +319,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderBottomWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
   },
   backBtn: {
     flexDirection: 'row',
@@ -327,17 +330,17 @@ const styles = StyleSheet.create({
   },
   backIcon: {
     fontSize: 28,
-    color: colors.accent,
+    color: c.accent,
     marginRight: 4,
     lineHeight: 28,
   },
   backText: {
     ...typography.body,
-    color: colors.accent,
+    color: c.accent,
   },
   headerTitle: {
     ...typography.heading,
-    color: colors.textPrimary,
+    color: c.textPrimary,
   },
   headerSpacer: {
     minWidth: 80,
@@ -350,42 +353,42 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderRadius: radius.md,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     marginBottom: spacing.md,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     flexWrap: 'wrap',
   },
   modeLabel: {
     ...typography.caption,
-    color: colors.textMuted,
+    color: c.textMuted,
   },
   modeValue: {
     ...typography.heading,
-    color: colors.textPrimary,
+    color: c.textPrimary,
   },
   modeHint: {
     ...typography.caption,
-    color: colors.textMuted,
+    color: c.textMuted,
     fontStyle: 'italic',
   },
   sectionTitle: {
     ...typography.heading,
-    color: colors.textPrimary,
+    color: c.textPrimary,
     marginTop: spacing.md,
     marginBottom: spacing.sm,
     letterSpacing: 0.5,
   },
   roundCard: {
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderRadius: radius.md,
     padding: spacing.md,
     marginBottom: spacing.sm,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
   },
   roundHeader: {
     flexDirection: 'row',
@@ -394,7 +397,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     paddingBottom: spacing.sm,
     borderBottomWidth: 1,
-    borderColor: colors.divider,
+    borderColor: c.divider,
   },
   roundTitleRow: {
     flexDirection: 'row',
@@ -403,7 +406,7 @@ const styles = StyleSheet.create({
   },
   roundTitle: {
     ...typography.heading,
-    color: colors.accent,
+    color: c.accent,
     fontWeight: '800',
   },
   specialBadge: {
@@ -428,19 +431,19 @@ const styles = StyleSheet.create({
   },
   playerName: {
     ...typography.body,
-    color: colors.textPrimary,
+    color: c.textPrimary,
     flex: 1,
   },
   playerNameWinner: {
-    color: colors.accent,
+    color: c.accent,
     fontWeight: '700',
   },
   playerValue: {
     ...typography.number,
-    color: colors.textPrimary,
+    color: c.textPrimary,
   },
   playerValueWinner: {
-    color: colors.accent,
+    color: c.accent,
     fontWeight: '700',
     fontSize: 14,
   },
@@ -464,12 +467,12 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   card: {
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderRadius: radius.md,
     padding: spacing.lg,
     marginBottom: spacing.md,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -479,11 +482,11 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     ...typography.heading,
-    color: colors.textPrimary,
+    color: c.textPrimary,
   },
   cardNet: {
     ...typography.numberLarge,
-    color: colors.textPrimary,
+    color: c.textPrimary,
   },
   row: {
     flexDirection: 'row',
@@ -492,29 +495,29 @@ const styles = StyleSheet.create({
   },
   rowLabel: {
     ...typography.body,
-    color: colors.textSecondary,
+    color: c.textSecondary,
   },
   rowValue: {
     ...typography.number,
-    color: colors.textPrimary,
+    color: c.textPrimary,
   },
   formula: {
     ...typography.caption,
-    color: colors.textMuted,
+    color: c.textMuted,
   },
   divider: {
     height: 1,
-    backgroundColor: colors.divider,
+    backgroundColor: c.divider,
     marginVertical: spacing.sm,
   },
-  negative: { color: colors.negative },
-  positive: { color: colors.positive },
+  negative: { color: c.negative },
+  positive: { color: c.positive },
   actions: {
     flexDirection: 'row',
     padding: spacing.lg,
     gap: spacing.md,
-    backgroundColor: colors.background,
+    backgroundColor: c.background,
     borderTopWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
   },
 });

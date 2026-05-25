@@ -1,4 +1,30 @@
-export const colors = {
+export interface ThemeColors {
+  background: string;
+  surface: string;
+  surfaceElevated: string;
+  border: string;
+  divider: string;
+
+  textPrimary: string;
+  textSecondary: string;
+  textMuted: string;
+
+  accent: string;
+  accentMuted: string;
+
+  negative: string;
+  negativeMuted: string;
+  positive: string;
+  positiveMuted: string;
+
+  buttonPrimary: string;
+  buttonPrimaryText: string;
+  buttonSecondary: string;
+  buttonSecondaryText: string;
+  buttonDanger: string;
+}
+
+export const darkColors: ThemeColors = {
   background: '#0F1419',
   surface: '#1A2028',
   surfaceElevated: '#232B36',
@@ -22,7 +48,37 @@ export const colors = {
   buttonSecondary: '#232B36',
   buttonSecondaryText: '#F5F7FA',
   buttonDanger: '#FF6B6B',
-} as const;
+};
+
+export const lightColors: ThemeColors = {
+  background: '#FFFFFF',
+  surface: '#F5F7FA',
+  surfaceElevated: '#EAEEF3',
+  border: '#D5DAE0',
+  divider: '#C5CAD0',
+
+  textPrimary: '#1A2028',
+  textSecondary: '#5C6675',
+  textMuted: '#9AA5B4',
+
+  accent: '#16A06E',
+  accentMuted: '#D6F2E6',
+
+  negative: '#DC2626',
+  negativeMuted: '#FEE2E2',
+  positive: '#16A06E',
+  positiveMuted: '#D6F2E6',
+
+  buttonPrimary: '#16A06E',
+  buttonPrimaryText: '#FFFFFF',
+  buttonSecondary: '#FFFFFF',
+  buttonSecondaryText: '#1A2028',
+  buttonDanger: '#DC2626',
+};
+
+// Backward-compat default (used in non-React modules). Always returns dark.
+// React components should use useTheme() instead.
+export const colors: ThemeColors = darkColors;
 
 export const spacing = {
   xs: 4,
@@ -49,3 +105,4 @@ export const typography = {
   number: { fontSize: 18, fontWeight: '600' as const, fontVariant: ['tabular-nums'] as ['tabular-nums'] },
   numberLarge: { fontSize: 28, fontWeight: '700' as const, fontVariant: ['tabular-nums'] as ['tabular-nums'] },
 };
+

@@ -15,7 +15,8 @@ import {
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Button } from '../components/Button';
 import { BannerSlot } from '../components/BannerSlot';
-import { colors, radius, spacing, typography } from '../theme';
+import { radius, spacing, ThemeColors, typography } from '../theme';
+import { useThemedStyles } from '../contexts/ThemeContext';
 import { clearHistory, deleteGame, loadHistory } from '../storage/gameHistory';
 import { SavedGame } from '../types/game';
 import type { RootStackParamList } from '../navigation/types';
@@ -30,6 +31,7 @@ const formatDate = (ts: number): string => {
 
 export const HistoryScreen: React.FC = () => {
   const navigation = useNavigation<Nav>();
+  const styles = useThemedStyles(makeStyles);
   const [games, setGames] = useState<SavedGame[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -143,10 +145,10 @@ export const HistoryScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: c.background,
   },
   header: {
     flexDirection: 'row',
@@ -157,11 +159,11 @@ const styles = StyleSheet.create({
   },
   title: {
     ...typography.display,
-    color: colors.textPrimary,
+    color: c.textPrimary,
   },
   clearText: {
     ...typography.caption,
-    color: colors.negative,
+    color: c.negative,
   },
   empty: {
     flex: 1,
@@ -171,11 +173,11 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     ...typography.heading,
-    color: colors.textSecondary,
+    color: c.textSecondary,
   },
   emptyHint: {
     ...typography.body,
-    color: colors.textMuted,
+    color: c.textMuted,
     marginTop: spacing.sm,
     textAlign: 'center',
   },
@@ -184,19 +186,19 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xxl,
   },
   card: {
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderRadius: radius.md,
     padding: spacing.lg,
     marginBottom: spacing.md,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
   },
   cardPressed: {
     opacity: 0.7,
   },
   cardDate: {
     ...typography.caption,
-    color: colors.textSecondary,
+    color: c.textSecondary,
     marginBottom: spacing.md,
   },
   cardColumns: {
@@ -208,26 +210,26 @@ const styles = StyleSheet.create({
   },
   miniLabel: {
     fontSize: 10,
-    color: colors.textMuted,
+    color: c.textMuted,
     letterSpacing: 0.5,
   },
   miniValue: {
     ...typography.number,
-    color: colors.textPrimary,
+    color: c.textPrimary,
     marginTop: 2,
   },
-  negative: { color: colors.negative },
-  positive: { color: colors.positive },
+  negative: { color: c.negative },
+  positive: { color: c.positive },
   hint: {
     fontSize: 10,
-    color: colors.textMuted,
+    color: c.textMuted,
     textAlign: 'center',
     marginTop: spacing.sm,
   },
   actions: {
     padding: spacing.lg,
-    backgroundColor: colors.background,
+    backgroundColor: c.background,
     borderTopWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
   },
 });

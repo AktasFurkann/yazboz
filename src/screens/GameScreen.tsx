@@ -17,7 +17,8 @@ import { EditNameModal } from '../components/EditNameModal';
 import { ColorPickerModal } from '../components/ColorPickerModal';
 import { computeMultipliersByRound } from '../logic/calculator';
 import { useGameContext } from '../contexts/GameContext';
-import { colors, radius, spacing, typography } from '../theme';
+import { radius, spacing, ThemeColors, typography } from '../theme';
+import { useThemedStyles } from '../contexts/ThemeContext';
 import { COLUMN_IDS, COLOR_BY_MULTIPLIER, MODE_LABEL } from '../types/game';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -60,6 +61,8 @@ export const GameScreen: React.FC = () => {
     specialFinishes,
     currentRoundIsSpecial,
   } = useGameContext();
+
+  const styles = useThemedStyles(makeStyles);
 
   const multipliersByRound = React.useMemo(
     () =>
@@ -489,8 +492,8 @@ export const GameScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
+const makeStyles = (c: ThemeColors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: c.background },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -499,7 +502,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   headerLeft: { flex: 1 },
-  title: { ...typography.title, color: colors.textPrimary },
+  title: { ...typography.title, color: c.textPrimary },
   subRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -510,15 +513,15 @@ const styles = StyleSheet.create({
   modePill: {
     paddingHorizontal: spacing.sm,
     paddingVertical: 3,
-    backgroundColor: colors.surfaceElevated,
+    backgroundColor: c.surfaceElevated,
     borderRadius: radius.pill,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
   },
   modePillText: {
     fontSize: 11,
     fontWeight: '700',
-    color: colors.textSecondary,
+    color: c.textSecondary,
     letterSpacing: 0.5,
   },
   colorBadge: {
@@ -546,23 +549,23 @@ const styles = StyleSheet.create({
     color: '#FBBF24',
     letterSpacing: 0.5,
   },
-  cellTag: { ...typography.caption, color: colors.accent },
+  cellTag: { ...typography.caption, color: c.accent },
   headerActions: { flexDirection: 'row', gap: spacing.xs },
   iconBtn: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderRadius: radius.sm,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
   },
   iconBtnAccent: {
-    backgroundColor: colors.accentMuted,
-    borderColor: colors.accent,
+    backgroundColor: c.accentMuted,
+    borderColor: c.accent,
   },
   iconBtnDisabled: { opacity: 0.4 },
-  iconBtnText: { ...typography.caption, color: colors.textSecondary },
-  iconBtnTextAccent: { color: colors.accent },
+  iconBtnText: { ...typography.caption, color: c.textSecondary },
+  iconBtnTextAccent: { color: c.accent },
   roundBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -570,10 +573,10 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
     paddingHorizontal: spacing.sm,
     paddingVertical: 4,
-    backgroundColor: colors.surfaceElevated,
+    backgroundColor: c.surfaceElevated,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     gap: spacing.sm,
   },
   roundBarEditing: {
@@ -584,7 +587,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: radius.sm,
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -592,14 +595,14 @@ const styles = StyleSheet.create({
   roundArrowText: {
     fontSize: 22,
     fontWeight: '700',
-    color: colors.textPrimary,
+    color: c.textPrimary,
     lineHeight: 24,
   },
   roundInfo: { flex: 1, alignItems: 'center' },
   roundLabel: {
     fontSize: 13,
     fontWeight: '800',
-    color: colors.textPrimary,
+    color: c.textPrimary,
     letterSpacing: 1,
   },
   roundEditingHint: {
@@ -613,29 +616,29 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     height: 32,
     borderRadius: radius.sm,
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
   },
   roundForwardNew: {
-    backgroundColor: colors.accentMuted,
-    borderColor: colors.accent,
+    backgroundColor: c.accentMuted,
+    borderColor: c.accent,
   },
   roundForwardText: {
     fontSize: 12,
     fontWeight: '700',
-    color: colors.textSecondary,
+    color: c.textSecondary,
   },
-  roundForwardNewText: { color: colors.accent },
+  roundForwardNewText: { color: c.accent },
   roundForwardDisabled: {
     opacity: 0.35,
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
+    backgroundColor: c.surface,
+    borderColor: c.border,
   },
   roundForwardTextDisabled: {
-    color: colors.textMuted,
+    color: c.textMuted,
   },
   columns: {
     flex: 1,
@@ -645,16 +648,16 @@ const styles = StyleSheet.create({
   },
   pressed: { opacity: 0.6 },
   selectHintBar: {
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderTopWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     paddingVertical: spacing.lg,
     alignItems: 'center',
     justifyContent: 'center',
   },
   selectHintText: {
     ...typography.body,
-    color: colors.textMuted,
+    color: c.textMuted,
     letterSpacing: 0.5,
   },
   previewOverlay: {
@@ -669,19 +672,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
   },
   previewCard: {
-    backgroundColor: colors.surfaceElevated,
+    backgroundColor: c.surfaceElevated,
     borderRadius: radius.lg,
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.lg,
     minWidth: 200,
     maxWidth: '90%',
     borderWidth: 2,
-    borderColor: colors.accent,
+    borderColor: c.accent,
     alignItems: 'center',
   },
   previewTitle: {
     ...typography.caption,
-    color: colors.accent,
+    color: c.accent,
     fontWeight: '800',
     letterSpacing: 1,
     marginBottom: spacing.sm,
@@ -689,14 +692,14 @@ const styles = StyleSheet.create({
   previewValues: {
     fontSize: 22,
     fontWeight: '700',
-    color: colors.textPrimary,
+    color: c.textPrimary,
     textAlign: 'center',
     fontVariant: ['tabular-nums'],
     lineHeight: 30,
   },
   previewCount: {
     ...typography.caption,
-    color: colors.textMuted,
+    color: c.textMuted,
     marginTop: spacing.sm,
   },
 });

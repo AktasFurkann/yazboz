@@ -7,7 +7,8 @@ import {
   View,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { colors, radius, spacing, typography } from '../theme';
+import { radius, spacing, ThemeColors, typography } from '../theme';
+import { useThemedStyles } from '../contexts/ThemeContext';
 import { COLOR_BY_MULTIPLIER } from '../types/game';
 
 interface Props {
@@ -31,6 +32,7 @@ export const ColorPickerModal: React.FC<Props> = ({
   onClear,
   onClose,
 }) => {
+  const styles = useThemedStyles(makeStyles);
   const [isSpecial, setIsSpecial] = useState(false);
 
   useEffect(() => {
@@ -185,134 +187,135 @@ export const ColorPickerModal: React.FC<Props> = ({
 
 const SPECIAL_COLOR = '#FBBF24';
 
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.lg,
-  },
-  card: {
-    width: '100%',
-    maxWidth: 420,
-    backgroundColor: colors.surfaceElevated,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  title: {
-    ...typography.heading,
-    color: colors.textPrimary,
-    marginBottom: 4,
-  },
-  subtitle: {
-    ...typography.caption,
-    color: colors.textMuted,
-    marginBottom: spacing.md,
-  },
-  modeToggle: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginBottom: spacing.lg,
-  },
-  modeBtn: {
-    flex: 1,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.md,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-  },
-  modeBtnActive: {
-    backgroundColor: colors.accentMuted,
-    borderColor: colors.accent,
-  },
-  modeBtnActiveSpecial: {
-    backgroundColor: SPECIAL_COLOR + '33',
-    borderColor: SPECIAL_COLOR,
-  },
-  modeBtnText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.textSecondary,
-    letterSpacing: 0.5,
-  },
-  modeBtnTextActive: {
-    color: colors.textPrimary,
-  },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  colorBtn: {
-    width: '47.5%',
-    paddingVertical: spacing.lg,
-    borderRadius: radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 3,
-    borderColor: 'transparent',
-  },
-  colorBtnSelected: {
-    borderColor: colors.accent,
-  },
-  colorNumber: {
-    fontSize: 28,
-    fontWeight: '900',
-    color: '#FFFFFF',
-    fontVariant: ['tabular-nums'],
-    lineHeight: 32,
-  },
-  colorName: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    letterSpacing: 1,
-    marginTop: 2,
-  },
-  colorSub: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    marginTop: 4,
-    opacity: 0.85,
-  },
-  colorTextDark: {
-    color: '#0F1419',
-  },
-  actions: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginTop: spacing.lg,
-  },
-  actionBtn: {
-    flex: 1,
-    paddingVertical: spacing.md,
-    borderRadius: radius.md,
-    alignItems: 'center',
-  },
-  clearBtn: {
-    backgroundColor: colors.negativeMuted,
-    borderWidth: 1,
-    borderColor: colors.negative,
-  },
-  clearBtnText: {
-    ...typography.heading,
-    color: colors.negative,
-    fontWeight: '700',
-  },
-  cancelBtn: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  cancelBtnText: {
-    ...typography.heading,
-    color: colors.textSecondary,
-  },
-  pressed: { opacity: 0.7 },
-});
+const makeStyles = (c: ThemeColors) =>
+  StyleSheet.create({
+    overlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.7)',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: spacing.lg,
+    },
+    card: {
+      width: '100%',
+      maxWidth: 420,
+      backgroundColor: c.surfaceElevated,
+      borderRadius: radius.lg,
+      padding: spacing.lg,
+      borderWidth: 1,
+      borderColor: c.border,
+    },
+    title: {
+      ...typography.heading,
+      color: c.textPrimary,
+      marginBottom: 4,
+    },
+    subtitle: {
+      ...typography.caption,
+      color: c.textMuted,
+      marginBottom: spacing.md,
+    },
+    modeToggle: {
+      flexDirection: 'row',
+      gap: spacing.sm,
+      marginBottom: spacing.lg,
+    },
+    modeBtn: {
+      flex: 1,
+      paddingVertical: spacing.sm,
+      borderRadius: radius.md,
+      backgroundColor: c.surface,
+      borderWidth: 1,
+      borderColor: c.border,
+      alignItems: 'center',
+    },
+    modeBtnActive: {
+      backgroundColor: c.accentMuted,
+      borderColor: c.accent,
+    },
+    modeBtnActiveSpecial: {
+      backgroundColor: SPECIAL_COLOR + '33',
+      borderColor: SPECIAL_COLOR,
+    },
+    modeBtnText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: c.textSecondary,
+      letterSpacing: 0.5,
+    },
+    modeBtnTextActive: {
+      color: c.textPrimary,
+    },
+    grid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: spacing.sm,
+    },
+    colorBtn: {
+      width: '47.5%',
+      paddingVertical: spacing.lg,
+      borderRadius: radius.md,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 3,
+      borderColor: 'transparent',
+    },
+    colorBtnSelected: {
+      borderColor: c.accent,
+    },
+    colorNumber: {
+      fontSize: 28,
+      fontWeight: '900',
+      color: '#FFFFFF',
+      fontVariant: ['tabular-nums'],
+      lineHeight: 32,
+    },
+    colorName: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: '#FFFFFF',
+      letterSpacing: 1,
+      marginTop: 2,
+    },
+    colorSub: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: '#FFFFFF',
+      marginTop: 4,
+      opacity: 0.85,
+    },
+    colorTextDark: {
+      color: '#0F1419',
+    },
+    actions: {
+      flexDirection: 'row',
+      gap: spacing.sm,
+      marginTop: spacing.lg,
+    },
+    actionBtn: {
+      flex: 1,
+      paddingVertical: spacing.md,
+      borderRadius: radius.md,
+      alignItems: 'center',
+    },
+    clearBtn: {
+      backgroundColor: c.negativeMuted,
+      borderWidth: 1,
+      borderColor: c.negative,
+    },
+    clearBtnText: {
+      ...typography.heading,
+      color: c.negative,
+      fontWeight: '700',
+    },
+    cancelBtn: {
+      backgroundColor: c.surface,
+      borderWidth: 1,
+      borderColor: c.border,
+    },
+    cancelBtnText: {
+      ...typography.heading,
+      color: c.textSecondary,
+    },
+    pressed: { opacity: 0.7 },
+  });

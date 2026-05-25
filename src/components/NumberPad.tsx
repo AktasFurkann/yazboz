@@ -2,7 +2,8 @@ import React, { memo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 // note: parseDraft is exported for parent (GameScreen) auto-commit logic
 import * as Haptics from 'expo-haptics';
-import { colors, radius, spacing, typography } from '../theme';
+import { radius, spacing, ThemeColors, typography } from '../theme';
+import { useThemedStyles } from '../contexts/ThemeContext';
 import { COLOR_BY_MULTIPLIER } from '../types/game';
 
 interface Props {
@@ -54,6 +55,7 @@ const NumberPadComponent: React.FC<Props> = ({
   hasRoundColor = false,
   onOpenRoundColor,
 }) => {
+  const styles = useThemedStyles(makeStyles);
   const [collapsed, setCollapsed] = useState(false);
   const [isSpecialMode, setIsSpecialMode] = useState(false);
 
@@ -377,26 +379,27 @@ const NumberPadComponent: React.FC<Props> = ({
 
 const YELLOW = '#FBBF24';
 
-const styles = StyleSheet.create({
+const makeStyles = (c: ThemeColors) =>
+  StyleSheet.create({
   container: {
-    backgroundColor: colors.surface,
+    backgroundColor: c.surface,
     borderTopWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     paddingHorizontal: spacing.md,
     paddingTop: spacing.xs,
     paddingBottom: spacing.sm,
   },
   collapsedBar: {
-    backgroundColor: colors.surfaceElevated,
+    backgroundColor: c.surfaceElevated,
     borderTopWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     paddingVertical: spacing.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
   collapsedText: {
     ...typography.caption,
-    color: colors.accent,
+    color: c.accent,
     fontWeight: '700',
     letterSpacing: 1.5,
   },
@@ -409,29 +412,29 @@ const styles = StyleSheet.create({
   smallBtn: {
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
-    backgroundColor: colors.surfaceElevated,
+    backgroundColor: c.surfaceElevated,
     borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     minWidth: 70,
   },
   nextBtn: {
-    backgroundColor: colors.accentMuted,
-    borderColor: colors.accent,
+    backgroundColor: c.accentMuted,
+    borderColor: c.accent,
   },
   smallBtnText: {
     ...typography.caption,
-    color: colors.textSecondary,
+    color: c.textSecondary,
   },
   nextBtnText: {
-    color: colors.accent,
+    color: c.accent,
     fontWeight: '700',
   },
   draftBox: {
     flex: 1,
-    backgroundColor: colors.surfaceElevated,
+    backgroundColor: c.surfaceElevated,
     borderRadius: radius.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
@@ -442,11 +445,11 @@ const styles = StyleSheet.create({
   draftText: {
     fontSize: 22,
     fontWeight: '700',
-    color: colors.accent,
+    color: c.accent,
     letterSpacing: 1,
   },
   draftEmpty: {
-    color: colors.textMuted,
+    color: c.textMuted,
     fontSize: 14,
     fontWeight: '500',
     letterSpacing: 0.5,
@@ -454,17 +457,17 @@ const styles = StyleSheet.create({
   collapseToggle: {
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.sm,
-    backgroundColor: colors.surfaceElevated,
+    backgroundColor: c.surfaceElevated,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     alignItems: 'center',
     justifyContent: 'center',
     minWidth: 38,
   },
   collapseToggleText: {
     fontSize: 14,
-    color: colors.textSecondary,
+    color: c.textSecondary,
     fontWeight: '700',
   },
   grid: {},
@@ -474,7 +477,7 @@ const styles = StyleSheet.create({
   },
   key: {
     flex: 1,
-    backgroundColor: colors.surfaceElevated,
+    backgroundColor: c.surfaceElevated,
     paddingVertical: spacing.sm,
     marginHorizontal: 3,
     borderRadius: radius.md,
@@ -482,7 +485,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   keyBackspace: {
-    backgroundColor: colors.border,
+    backgroundColor: c.border,
   },
   keyUndo: {
     backgroundColor: YELLOW + '22',
@@ -494,10 +497,10 @@ const styles = StyleSheet.create({
   },
   keyText: {
     ...typography.title,
-    color: colors.textPrimary,
+    color: c.textPrimary,
   },
   keyActionText: {
-    color: colors.textSecondary,
+    color: c.textSecondary,
   },
   keyUndoText: {
     ...typography.heading,
@@ -506,10 +509,10 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   keyTextDisabled: {
-    color: colors.textMuted,
+    color: c.textMuted,
   },
   addBtn: {
-    backgroundColor: colors.buttonPrimary,
+    backgroundColor: c.buttonPrimary,
     paddingVertical: spacing.md,
     marginHorizontal: 3,
     marginTop: 2,
@@ -517,11 +520,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   addBtnDisabled: {
-    backgroundColor: colors.border,
+    backgroundColor: c.border,
   },
   addBtnText: {
     ...typography.title,
-    color: colors.buttonPrimaryText,
+    color: c.buttonPrimaryText,
     letterSpacing: 1.5,
     fontWeight: '800',
   },
@@ -550,7 +553,7 @@ const styles = StyleSheet.create({
     opacity: 0.4,
   },
   smallBtnTextDisabled: {
-    color: colors.textMuted,
+    color: c.textMuted,
   },
   pressed: {
     opacity: 0.6,
@@ -564,7 +567,7 @@ const styles = StyleSheet.create({
   },
   colorTitle: {
     ...typography.heading,
-    color: colors.textPrimary,
+    color: c.textPrimary,
     letterSpacing: 0.5,
   },
   colorHeaderActions: {
@@ -575,26 +578,26 @@ const styles = StyleSheet.create({
   clearColorBtn: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    backgroundColor: colors.negativeMuted,
+    backgroundColor: c.negativeMuted,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.negative,
+    borderColor: c.negative,
     alignItems: 'center',
     justifyContent: 'center',
   },
   clearColorBtnDisabled: {
-    backgroundColor: colors.surfaceElevated,
-    borderColor: colors.border,
+    backgroundColor: c.surfaceElevated,
+    borderColor: c.border,
     opacity: 0.5,
   },
   clearColorBtnText: {
     fontSize: 13,
     fontWeight: '800',
-    color: colors.negative,
+    color: c.negative,
     letterSpacing: 0.5,
   },
   clearColorBtnTextDisabled: {
-    color: colors.textMuted,
+    color: c.textMuted,
   },
   colorGrid: {
     flexDirection: 'row',
@@ -637,14 +640,14 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: spacing.sm,
     borderRadius: radius.md,
-    backgroundColor: colors.surfaceElevated,
+    backgroundColor: c.surfaceElevated,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: c.border,
     alignItems: 'center',
   },
   modeBtnActive: {
-    backgroundColor: colors.accentMuted,
-    borderColor: colors.accent,
+    backgroundColor: c.accentMuted,
+    borderColor: c.accent,
   },
   modeBtnActiveSpecial: {
     backgroundColor: '#FBBF2433',
@@ -653,11 +656,11 @@ const styles = StyleSheet.create({
   modeBtnText: {
     fontSize: 13,
     fontWeight: '700',
-    color: colors.textSecondary,
+    color: c.textSecondary,
     letterSpacing: 0.5,
   },
   modeBtnTextActive: {
-    color: colors.textPrimary,
+    color: c.textPrimary,
   },
 });
 

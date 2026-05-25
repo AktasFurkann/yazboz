@@ -12,7 +12,8 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BannerSlot } from '../components/BannerSlot';
 import { NameSetupModal } from '../components/NameSetupModal';
 import { useGameContext } from '../contexts/GameContext';
-import { colors, radius, spacing, typography } from '../theme';
+import { useTheme, useThemedStyles } from '../contexts/ThemeContext';
+import { radius, spacing, ThemeColors, typography } from '../theme';
 import type { RootStackParamList } from '../navigation/types';
 import type { GameMode } from '../types/game';
 
@@ -62,6 +63,8 @@ const CATEGORIES: Category[] = [
 export const MenuScreen: React.FC = () => {
   const navigation = useNavigation<Nav>();
   const { startNewGame } = useGameContext();
+  const styles = useThemedStyles(makeStyles);
+  const { isDark, toggleTheme } = useTheme();
   const [pendingCategory, setPendingCategory] = useState<Category | null>(null);
 
   const handleCategoryTap = (cat: Category) => {
@@ -79,8 +82,23 @@ export const MenuScreen: React.FC = () => {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.header}>
-        <Text style={styles.title}>Yazboz</Text>
-        <Text style={styles.subtitle}>Oyun türünü seç</Text>
+        <View style={styles.headerLeft}>
+          <Text style={styles.title}>Yazboz</Text>
+          <Text style={styles.subtitle}>Oyun türünü seç</Text>
+        </View>
+        <Pressable
+          onPress={toggleTheme}
+          style={({ pressed }) => [
+            styles.themeToggle,
+            pressed && styles.pressed,
+          ]}
+          hitSlop={8}
+        >
+          <Text style={styles.themeToggleIcon}>{isDark ? '🌙' : '☀️'}</Text>
+          <Text style={styles.themeToggleText}>
+            {isDark ? 'Gece' : 'Gündüz'}
+          </Text>
+        </Pressable>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
@@ -111,7 +129,7 @@ export const MenuScreen: React.FC = () => {
                 <Text style={styles.cardSubtitle}>{cat.subtitle}</Text>
               </View>
               {cat.enabled ? (
-                <Text style={[styles.cardArrow, { color: cat.accent ?? colors.accent }]}>
+                <Text style={[styles.cardArrow, { color: cat.accent ?? '#3DDC97' }]}>
                   ›
                 </Text>
               ) : (
@@ -148,91 +166,115 @@ export const MenuScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  header: {
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.lg,
-  },
-  title: {
-    ...typography.display,
-    color: colors.textPrimary,
-  },
-  subtitle: {
-    ...typography.body,
-    color: colors.textMuted,
-    marginTop: 4,
-  },
-  content: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xxl,
-  },
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    marginBottom: spacing.md,
-    borderWidth: 2,
-    borderColor: colors.border,
-  },
-  cardDisabled: {
-    opacity: 0.55,
-  },
-  cardPressed: {
-    opacity: 0.7,
-  },
-  cardRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  cardLeft: {
-    flex: 1,
-    paddingRight: spacing.md,
-  },
-  cardTitle: {
-    ...typography.title,
-    color: colors.textPrimary,
-  },
-  cardTitleDisabled: {
-    color: colors.textSecondary,
-  },
-  cardSubtitle: {
-    ...typography.caption,
-    color: colors.textMuted,
-    marginTop: 4,
-  },
-  cardArrow: {
-    fontSize: 32,
-    fontWeight: '700',
-  },
-  soonBadge: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    backgroundColor: colors.border,
-    borderRadius: radius.pill,
-  },
-  soonBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: colors.textMuted,
-    letterSpacing: 1,
-  },
-  historyBtn: {
-    marginTop: spacing.lg,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.surfaceElevated,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-  },
-  historyBtnText: {
-    ...typography.heading,
-    color: colors.textSecondary,
-  },
-});
+const makeStyles = (c: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: c.background,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      justifyContent: 'space-between',
+      paddingHorizontal: spacing.xl,
+      paddingTop: spacing.lg,
+      paddingBottom: spacing.lg,
+    },
+    headerLeft: { flex: 1 },
+    title: {
+      ...typography.display,
+      color: c.textPrimary,
+    },
+    subtitle: {
+      ...typography.body,
+      color: c.textMuted,
+      marginTop: 4,
+    },
+    themeToggle: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      backgroundColor: c.surfaceElevated,
+      borderRadius: radius.pill,
+      borderWidth: 1,
+      borderColor: c.border,
+    },
+    themeToggleIcon: { fontSize: 16 },
+    themeToggleText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: c.textPrimary,
+      letterSpacing: 0.3,
+    },
+    content: {
+      paddingHorizontal: spacing.lg,
+      paddingBottom: spacing.xxl,
+    },
+    card: {
+      backgroundColor: c.surface,
+      borderRadius: radius.lg,
+      padding: spacing.lg,
+      marginBottom: spacing.md,
+      borderWidth: 2,
+      borderColor: c.border,
+    },
+    cardDisabled: {
+      opacity: 0.55,
+    },
+    cardPressed: {
+      opacity: 0.7,
+    },
+    cardRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    cardLeft: {
+      flex: 1,
+      paddingRight: spacing.md,
+    },
+    cardTitle: {
+      ...typography.title,
+      color: c.textPrimary,
+    },
+    cardTitleDisabled: {
+      color: c.textSecondary,
+    },
+    cardSubtitle: {
+      ...typography.caption,
+      color: c.textMuted,
+      marginTop: 4,
+    },
+    cardArrow: {
+      fontSize: 32,
+      fontWeight: '700',
+    },
+    soonBadge: {
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 4,
+      backgroundColor: c.border,
+      borderRadius: radius.pill,
+    },
+    soonBadgeText: {
+      fontSize: 10,
+      fontWeight: '700',
+      color: c.textMuted,
+      letterSpacing: 1,
+    },
+    historyBtn: {
+      marginTop: spacing.lg,
+      paddingVertical: spacing.md,
+      backgroundColor: c.surfaceElevated,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: c.border,
+      alignItems: 'center',
+    },
+    historyBtnText: {
+      ...typography.heading,
+      color: c.textSecondary,
+    },
+    pressed: { opacity: 0.6 },
+  });

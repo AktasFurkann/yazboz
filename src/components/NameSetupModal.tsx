@@ -9,7 +9,8 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { colors, radius, spacing, typography } from '../theme';
+import { radius, spacing, ThemeColors, typography } from '../theme';
+import { useTheme, useThemedStyles } from '../contexts/ThemeContext';
 
 interface Props {
   visible: boolean;
@@ -28,6 +29,8 @@ export const NameSetupModal: React.FC<Props> = ({
   onCancel,
   onConfirm,
 }) => {
+  const styles = useThemedStyles(makeStyles);
+  const { colors } = useTheme();
   const [names, setNames] = useState<string[]>(initialNames);
 
   useEffect(() => {
@@ -109,88 +112,89 @@ export const NameSetupModal: React.FC<Props> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.lg,
-  },
-  card: {
-    width: '100%',
-    maxWidth: 420,
-    backgroundColor: colors.surfaceElevated,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  title: {
-    ...typography.heading,
-    color: colors.textPrimary,
-    marginBottom: spacing.xs,
-  },
-  subtitle: {
-    ...typography.caption,
-    color: colors.textMuted,
-    marginBottom: spacing.lg,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginBottom: spacing.sm,
-  },
-  indexChip: {
-    width: 32,
-    height: 32,
-    borderRadius: radius.sm,
-    backgroundColor: colors.accentMuted,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  indexChipText: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: colors.accent,
-  },
-  input: {
-    flex: 1,
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    color: colors.textPrimary,
-    fontSize: 16,
-  },
-  actions: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginTop: spacing.lg,
-  },
-  btn: {
-    flex: 1,
-    paddingVertical: spacing.md,
-    borderRadius: radius.md,
-    alignItems: 'center',
-  },
-  btnPrimary: { backgroundColor: colors.buttonPrimary },
-  btnSecondary: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  btnTextPrimary: {
-    ...typography.heading,
-    color: colors.buttonPrimaryText,
-    fontWeight: '700',
-  },
-  btnTextSecondary: {
-    ...typography.heading,
-    color: colors.textSecondary,
-  },
-  pressed: { opacity: 0.7 },
-});
+const makeStyles = (c: ThemeColors) =>
+  StyleSheet.create({
+    overlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.7)',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: spacing.lg,
+    },
+    card: {
+      width: '100%',
+      maxWidth: 420,
+      backgroundColor: c.surfaceElevated,
+      borderRadius: radius.lg,
+      padding: spacing.lg,
+      borderWidth: 1,
+      borderColor: c.border,
+    },
+    title: {
+      ...typography.heading,
+      color: c.textPrimary,
+      marginBottom: spacing.xs,
+    },
+    subtitle: {
+      ...typography.caption,
+      color: c.textMuted,
+      marginBottom: spacing.lg,
+    },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      marginBottom: spacing.sm,
+    },
+    indexChip: {
+      width: 32,
+      height: 32,
+      borderRadius: radius.sm,
+      backgroundColor: c.accentMuted,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    indexChipText: {
+      fontSize: 14,
+      fontWeight: '800',
+      color: c.accent,
+    },
+    input: {
+      flex: 1,
+      backgroundColor: c.surface,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: c.border,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      color: c.textPrimary,
+      fontSize: 16,
+    },
+    actions: {
+      flexDirection: 'row',
+      gap: spacing.sm,
+      marginTop: spacing.lg,
+    },
+    btn: {
+      flex: 1,
+      paddingVertical: spacing.md,
+      borderRadius: radius.md,
+      alignItems: 'center',
+    },
+    btnPrimary: { backgroundColor: c.buttonPrimary },
+    btnSecondary: {
+      backgroundColor: c.surface,
+      borderWidth: 1,
+      borderColor: c.border,
+    },
+    btnTextPrimary: {
+      ...typography.heading,
+      color: c.buttonPrimaryText,
+      fontWeight: '700',
+    },
+    btnTextSecondary: {
+      ...typography.heading,
+      color: c.textSecondary,
+    },
+    pressed: { opacity: 0.7 },
+  });

@@ -1,7 +1,8 @@
 import React, { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { colors, radius, spacing, typography } from '../theme';
+import { radius, spacing, ThemeColors, typography } from '../theme';
+import { useThemedStyles } from '../contexts/ThemeContext';
 import { Column, ColumnId, ColumnResult, Side } from '../types/game';
 
 interface Props {
@@ -52,6 +53,7 @@ const ColumnViewComponent: React.FC<Props> = ({
   onPreviewStart,
   onPreviewEnd,
 }) => {
+  const styles = useThemedStyles(makeStyles);
   const handlePress = (side: Side) => {
     Haptics.selectionAsync();
     onSelect(index, side);
@@ -169,131 +171,132 @@ const ColumnViewComponent: React.FC<Props> = ({
 const TOP_MIN_HEIGHT = 54;
 const TOP_MAX_HEIGHT = 80;
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    padding: spacing.sm,
-    marginHorizontal: 3,
-    overflow: 'hidden',
-    justifyContent: 'flex-start',
-  },
-  containerSelected: {
-    borderColor: colors.accent,
-  },
-  header: {
-    paddingHorizontal: 4,
-    paddingVertical: 4,
-    marginBottom: spacing.xs,
-    minHeight: 26,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.sm,
-  },
-  headerLabel: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.textSecondary,
-    textAlign: 'center',
-    letterSpacing: 0.3,
-  },
-  cellTop: {
-    minHeight: TOP_MIN_HEIGHT,
-    maxHeight: TOP_MAX_HEIGHT,
-    backgroundColor: colors.negativeMuted + '40',
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.xs,
-    borderRadius: radius.sm,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  cellBottom: {
-    flex: 1,
-    backgroundColor: colors.positiveMuted + '40',
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.xs,
-    borderRadius: radius.sm,
-    alignItems: 'center',
-  },
-  cellActive: {
-    backgroundColor: colors.accent + '33',
-  },
-  cellLocked: {
-    opacity: 0.4,
-  },
-  cellLabel: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: colors.textMuted,
-    letterSpacing: 0.5,
-    marginBottom: spacing.xs,
-  },
-  topValues: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    textAlign: 'center',
-    fontVariant: ['tabular-nums'],
-  },
-  bottomList: {
-    flex: 1,
-    width: '100%',
-    alignItems: 'center',
-    paddingVertical: 2,
-    overflow: 'hidden',
-  },
-  bottomItem: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    fontVariant: ['tabular-nums'],
-    lineHeight: 24,
-    textAlign: 'center',
-  },
-  empty: {
-    color: colors.textMuted,
-    fontWeight: '400',
-  },
-  netFooter: {
-    width: '100%',
-    marginTop: spacing.xs,
-    paddingVertical: 4,
-    borderTopWidth: 1,
-    borderColor: colors.divider,
-    alignItems: 'center',
-  },
-  netLabel: {
-    fontSize: 9,
-    fontWeight: '700',
-    color: colors.textMuted,
-    letterSpacing: 1,
-  },
-  netValue: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: colors.textPrimary,
-    fontVariant: ['tabular-nums'],
-    marginTop: 1,
-  },
-  netNegative: { color: colors.negative },
-  netPositive: { color: colors.positive },
-  finishedLine: {
-    width: '85%',
-    height: 3,
-    backgroundColor: colors.accent,
-    marginVertical: 6,
-    borderRadius: 2,
-  },
-  line: {
-    height: 2,
-    backgroundColor: colors.divider,
-    marginVertical: spacing.xs,
-    borderRadius: 1,
-  },
-  pressed: { opacity: 0.6 },
-});
+const makeStyles = (c: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: c.surface,
+      borderRadius: radius.md,
+      borderWidth: 1.5,
+      borderColor: c.border,
+      padding: spacing.sm,
+      marginHorizontal: 3,
+      overflow: 'hidden',
+      justifyContent: 'flex-start',
+    },
+    containerSelected: {
+      borderColor: c.accent,
+    },
+    header: {
+      paddingHorizontal: 4,
+      paddingVertical: 4,
+      marginBottom: spacing.xs,
+      minHeight: 26,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: radius.sm,
+    },
+    headerLabel: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: c.textSecondary,
+      textAlign: 'center',
+      letterSpacing: 0.3,
+    },
+    cellTop: {
+      minHeight: TOP_MIN_HEIGHT,
+      maxHeight: TOP_MAX_HEIGHT,
+      backgroundColor: c.negativeMuted + '60',
+      paddingVertical: spacing.xs,
+      paddingHorizontal: spacing.xs,
+      borderRadius: radius.sm,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    cellBottom: {
+      flex: 1,
+      backgroundColor: c.positiveMuted + '60',
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.xs,
+      borderRadius: radius.sm,
+      alignItems: 'center',
+    },
+    cellActive: {
+      backgroundColor: c.accent + '33',
+    },
+    cellLocked: {
+      opacity: 0.4,
+    },
+    cellLabel: {
+      fontSize: 10,
+      fontWeight: '600',
+      color: c.textMuted,
+      letterSpacing: 0.5,
+      marginBottom: spacing.xs,
+    },
+    topValues: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: c.textPrimary,
+      textAlign: 'center',
+      fontVariant: ['tabular-nums'],
+    },
+    bottomList: {
+      flex: 1,
+      width: '100%',
+      alignItems: 'center',
+      paddingVertical: 2,
+      overflow: 'hidden',
+    },
+    bottomItem: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: c.textPrimary,
+      fontVariant: ['tabular-nums'],
+      lineHeight: 24,
+      textAlign: 'center',
+    },
+    empty: {
+      color: c.textMuted,
+      fontWeight: '400',
+    },
+    netFooter: {
+      width: '100%',
+      marginTop: spacing.xs,
+      paddingVertical: 4,
+      borderTopWidth: 1,
+      borderColor: c.divider,
+      alignItems: 'center',
+    },
+    netLabel: {
+      fontSize: 9,
+      fontWeight: '700',
+      color: c.textMuted,
+      letterSpacing: 1,
+    },
+    netValue: {
+      fontSize: 18,
+      fontWeight: '800',
+      color: c.textPrimary,
+      fontVariant: ['tabular-nums'],
+      marginTop: 1,
+    },
+    netNegative: { color: c.negative },
+    netPositive: { color: c.positive },
+    finishedLine: {
+      width: '85%',
+      height: 3,
+      backgroundColor: c.accent,
+      marginVertical: 6,
+      borderRadius: 2,
+    },
+    line: {
+      height: 2,
+      backgroundColor: c.divider,
+      marginVertical: spacing.xs,
+      borderRadius: 1,
+    },
+    pressed: { opacity: 0.6 },
+  });
 
 export const ColumnView = memo(ColumnViewComponent);
