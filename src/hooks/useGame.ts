@@ -413,6 +413,33 @@ export const useGame = () => {
     );
   }, []);
 
+  const swapColumns = useCallback(
+    (a: ColumnId, b: ColumnId) => {
+      if (a === b) return;
+      setColumns((prev) => {
+        const next = [...prev];
+        [next[a], next[b]] = [next[b], next[a]];
+        return next;
+      });
+      setPlayerNames((prev) => {
+        const next = [...prev];
+        [next[a], next[b]] = [next[b], next[a]];
+        return next;
+      });
+      setSelection((prev) => {
+        if (prev.column === a) return { ...prev, column: b };
+        if (prev.column === b) return { ...prev, column: a };
+        return prev;
+      });
+      setWinnerHint((prev) => {
+        if (prev === a) return b;
+        if (prev === b) return a;
+        return prev;
+      });
+    },
+    []
+  );
+
   const setAllPlayerNames = useCallback((names: string[]) => {
     setPlayerNames((prev) =>
       prev.map((n, i) => {
@@ -515,6 +542,7 @@ export const useGame = () => {
     specialFinishes,
     currentRoundIsSpecial,
     canAddNumber,
+    swapColumns,
   };
 };
 

@@ -13,7 +13,6 @@ import {
   useNavigation,
 } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Button } from '../components/Button';
 import { BannerSlot } from '../components/BannerSlot';
 import { radius, spacing, ThemeColors, typography } from '../theme';
 import { useThemedStyles } from '../contexts/ThemeContext';
@@ -79,11 +78,24 @@ export const HistoryScreen: React.FC = () => {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <View style={styles.header}>
+        <Pressable
+          onPress={() => navigation.goBack()}
+          style={({ pressed }) => [
+            styles.backBtn,
+            pressed && styles.pressed,
+          ]}
+          hitSlop={12}
+        >
+          <Text style={styles.backIcon}>‹</Text>
+          <Text style={styles.backText}>Geri</Text>
+        </Pressable>
         <Text style={styles.title}>Geçmiş</Text>
-        {games.length > 0 && (
-          <Pressable onPress={handleClearAll}>
+        {games.length > 0 ? (
+          <Pressable onPress={handleClearAll} hitSlop={8}>
             <Text style={styles.clearText}>Tümünü Sil</Text>
           </Pressable>
+        ) : (
+          <View style={styles.headerSpacer} />
         )}
       </View>
 
@@ -131,15 +143,6 @@ export const HistoryScreen: React.FC = () => {
         />
       )}
 
-      <View style={styles.actions}>
-        <Button
-          label="Geri"
-          variant="secondary"
-          onPress={() => navigation.goBack()}
-          style={{ flex: 1 }}
-        />
-      </View>
-
       <BannerSlot />
     </SafeAreaView>
   );
@@ -154,17 +157,43 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderColor: c.border,
+  },
+  backBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    minWidth: 80,
+  },
+  backIcon: {
+    fontSize: 28,
+    color: c.accent,
+    marginRight: 4,
+    lineHeight: 28,
+  },
+  backText: {
+    ...typography.body,
+    color: c.accent,
   },
   title: {
-    ...typography.display,
+    ...typography.heading,
     color: c.textPrimary,
+  },
+  headerSpacer: {
+    minWidth: 80,
   },
   clearText: {
     ...typography.caption,
     color: c.negative,
+    fontWeight: '700',
+    minWidth: 80,
+    textAlign: 'right',
   },
+  pressed: { opacity: 0.6 },
   empty: {
     flex: 1,
     alignItems: 'center',
@@ -225,11 +254,5 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     color: c.textMuted,
     textAlign: 'center',
     marginTop: spacing.sm,
-  },
-  actions: {
-    padding: spacing.lg,
-    backgroundColor: c.background,
-    borderTopWidth: 1,
-    borderColor: c.border,
   },
 });

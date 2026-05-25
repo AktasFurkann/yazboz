@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
+  Dimensions,
   Pressable,
   StyleSheet,
   Text,
@@ -15,6 +16,7 @@ import { NumberPad, parseDraft } from '../components/NumberPad';
 import { BannerSlot } from '../components/BannerSlot';
 import { EditNameModal } from '../components/EditNameModal';
 import { ColorPickerModal } from '../components/ColorPickerModal';
+import { ConfirmDestructiveModal } from '../components/ConfirmDestructiveModal';
 import {
   computeBaseColorsByRound,
   computeMultipliersByRound,
@@ -66,7 +68,22 @@ export const GameScreen: React.FC = () => {
     currentRoundIsSpecial,
     canAddNumber,
     deselect,
+    swapColumns,
   } = useGameContext();
+
+  const screenWidth = Dimensions.get('window').width;
+  const columnWidth = screenWidth / 4;
+
+  const handleColumnDrag = useCallback(
+    (from: ColumnId, dx: number) => {
+      const movement = Math.round(dx / columnWidth);
+      if (movement === 0) return;
+      const target = Math.max(0, Math.min(3, from + movement)) as ColumnId;
+      if (target === from) return;
+      swapColumns(from, target);
+    },
+    [columnWidth, swapColumns]
+  );
 
   const styles = useThemedStyles(makeStyles);
 
@@ -250,28 +267,27 @@ export const GameScreen: React.FC = () => {
   );
 
   const exitConfirmedRef = useRef(false);
+  const pendingExitActionRef = useRef<(() => void) | null>(null);
+  const [exitModalVisible, setExitModalVisible] = useState(false);
 
-  const showExitConfirm = useCallback(
-    (onConfirm: () => void) => {
-      Alert.alert(
-        'Menüye Dön',
-        'Tüm oyun verileri silinecek ve ana menüye döneceksin. Emin misin?',
-        [
-          { text: 'İptal', style: 'cancel', onPress: () => {} },
-          {
-            text: 'Evet, dön',
-            style: 'destructive',
-            onPress: () => {
-              exitConfirmedRef.current = true;
-              resetAll();
-              onConfirm();
-            },
-          },
-        ]
-      );
-    },
-    [resetAll]
-  );
+  const showExitConfirm = useCallback((onConfirm: () => void) => {
+    pendingExitActionRef.current = onConfirm;
+    setExitModalVisible(true);
+  }, []);
+
+  const handleConfirmExit = useCallback(() => {
+    setExitModalVisible(false);
+    exitConfirmedRef.current = true;
+    resetAll();
+    const action = pendingExitActionRef.current;
+    pendingExitActionRef.current = null;
+    action?.();
+  }, [resetAll]);
+
+  const handleCancelExit = useCallback(() => {
+    setExitModalVisible(false);
+    pendingExitActionRef.current = null;
+  }, []);
 
   const handleBackToMenu = useCallback(() => {
     showExitConfirm(() => {
@@ -465,6 +481,7 @@ export const GameScreen: React.FC = () => {
             onEditName={handleEditName}
             onPreviewStart={handlePreviewStart}
             onPreviewEnd={handlePreviewEnd}
+            onDragEnd={handleColumnDrag}
           />
         ))}
       </View>
@@ -507,6 +524,16 @@ export const GameScreen: React.FC = () => {
           onSave={handleSaveName}
         />
       )}
+
+      <ConfirmDestructiveModal
+        visible={exitModalVisible}
+        title="MENÜYE DÖN"
+        message="Tüm oyun verileri silinecek ve ana menüye döneceksin. Bu işlem geri alınamaz!"
+        confirmLabel="⚠ EVET, ÇIK"
+        cancelLabel="Vazgeç"
+        onConfirm={handleConfirmExit}
+        onCancel={handleCancelExit}
+      />
 
       <ColorPickerModal
         visible={colorPickerOpen}

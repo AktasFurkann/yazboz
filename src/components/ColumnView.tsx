@@ -1,5 +1,13 @@
-import React, { memo } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { memo, useRef, useState } from 'react';
+import {
+  Animated,
+  PanResponder,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { radius, spacing, ThemeColors, typography } from '../theme';
 import { useThemedStyles } from '../contexts/ThemeContext';
@@ -21,6 +29,7 @@ interface Props {
   onEditName?: (column: ColumnId) => void;
   onPreviewStart?: (column: ColumnId, side: Side) => void;
   onPreviewEnd?: () => void;
+  onDragEnd?: (column: ColumnId, dx: number) => void;
 }
 
 const formatNumbersComma = (values: number[]): string =>
@@ -147,8 +156,43 @@ const ColumnViewComponent: React.FC<Props> = ({
   onEditName,
   onPreviewStart,
   onPreviewEnd,
+  onDragEnd,
 }) => {
   const styles = useThemedStyles(makeStyles);
+  const translateX = useRef(new Animated.Value(0)).current;
+  const [isDragging, setIsDragging] = useState(false);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_, g) =>
+        Math.abs(g.dx) > 8 && Math.abs(g.dx) > Math.abs(g.dy),
+      onPanResponderGrant: () => {
+        setIsDragging(true);
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      },
+      onPanResponderMove: Animated.event(
+        [null, { dx: translateX }],
+        { useNativeDriver: false }
+      ),
+      onPanResponderRelease: (_, g) => {
+        setIsDragging(false);
+        onDragEnd?.(index, g.dx);
+        Animated.spring(translateX, {
+          toValue: 0,
+          useNativeDriver: false,
+          friction: 8,
+        }).start();
+      },
+      onPanResponderTerminate: () => {
+        setIsDragging(false);
+        Animated.spring(translateX, {
+          toValue: 0,
+          useNativeDriver: false,
+        }).start();
+      },
+    })
+  ).current;
   const handlePress = (side: Side) => {
     Haptics.selectionAsync();
     onSelect(index, side);
@@ -173,20 +217,32 @@ const ColumnViewComponent: React.FC<Props> = ({
   const hasAnyNumbers = column.top.length > 0 || column.bottom.length > 0;
 
   return (
-    <View style={[styles.container, isSelected && styles.containerSelected]}>
-      <Pressable
-        onPress={handleNameTap}
-        style={({ pressed }) => [styles.header, pressed && styles.pressed]}
-        hitSlop={4}
-      >
-        <Text
-          style={styles.headerLabel}
-          numberOfLines={1}
-          ellipsizeMode="tail"
+    <Animated.View
+      style={[
+        styles.container,
+        isSelected && styles.containerSelected,
+        isDragging && styles.containerDragging,
+        { transform: [{ translateX }] },
+      ]}
+    >
+      <View {...panResponder.panHandlers}>
+        <Pressable
+          onPress={handleNameTap}
+          style={({ pressed }) => [styles.header, pressed && styles.pressed]}
+          hitSlop={4}
         >
-          {name}
-        </Text>
-      </Pressable>
+          <Text
+            style={styles.headerLabel}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
+            {name}
+          </Text>
+          {isDragging && (
+            <Text style={styles.dragHint}>↔ sürükle</Text>
+          )}
+        </Pressable>
+      </View>
 
       <Pressable
         onPress={() => handlePress('top')}
@@ -263,7 +319,7 @@ const ColumnViewComponent: React.FC<Props> = ({
           </View>
         )}
       </Pressable>
-    </View>
+    </Animated.View>
   );
 };
 
@@ -285,6 +341,23 @@ const makeStyles = (c: ThemeColors) =>
     },
     containerSelected: {
       borderColor: c.accent,
+    },
+    containerDragging: {
+      borderColor: c.accent,
+      borderWidth: 2.5,
+      shadowColor: c.accent,
+      shadowOpacity: 0.5,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 4 },
+      elevation: 10,
+      zIndex: 100,
+    },
+    dragHint: {
+      fontSize: 9,
+      fontWeight: '700',
+      color: c.accent,
+      letterSpacing: 0.5,
+      marginTop: 2,
     },
     header: {
       paddingHorizontal: 4,
