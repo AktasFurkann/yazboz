@@ -372,33 +372,8 @@ const NumberPadComponent: React.FC<Props> = ({
           </View>
         ))}
 
-        {hasRoundColor ? (
-          <Pressable
-            onPress={handleAdd}
-            disabled={!hasDraft || !canAddNumber}
-            style={({ pressed }) => [
-              styles.addBtn,
-              (!hasDraft || !canAddNumber) && styles.addBtnDisabled,
-              pressed && hasDraft && canAddNumber && styles.pressed,
-            ]}
-          >
-            <Text style={styles.addBtnText}>
-              {canAddNumber ? '+ EKLE' : 'Sadece CEZA verilebilir'}
-            </Text>
-          </Pressable>
-        ) : (
-          <Pressable
-            onPress={handleOpenColor}
-            style={({ pressed }) => [
-              styles.colorPickBtn,
-              pressed && styles.pressed,
-            ]}
-          >
-            <Text style={styles.colorPickBtnText}>🎨  RENK SEÇ</Text>
-            <Text style={styles.colorPickBtnSub}>
-              tur çarpanını belirle (kapalı el için)
-            </Text>
-          </Pressable>
+        {!canAddNumber && (
+          <Text style={styles.restrictionHint}>Sadece CEZA verilebilir</Text>
         )}
       </View>
     </View>
@@ -539,43 +514,13 @@ const makeStyles = (c: ThemeColors) =>
   keyTextDisabled: {
     color: c.textMuted,
   },
-  addBtn: {
-    backgroundColor: c.buttonPrimary,
-    paddingVertical: spacing.md,
-    marginHorizontal: 3,
-    marginTop: 2,
-    borderRadius: radius.md,
-    alignItems: 'center',
-  },
-  addBtnDisabled: {
-    backgroundColor: c.border,
-  },
-  addBtnText: {
-    ...typography.title,
-    color: c.buttonPrimaryText,
-    letterSpacing: 1.5,
-    fontWeight: '800',
-  },
-  colorPickBtn: {
-    backgroundColor: '#FBBF24',
-    paddingVertical: spacing.md,
-    marginHorizontal: 3,
-    marginTop: 2,
-    borderRadius: radius.md,
-    alignItems: 'center',
-  },
-  colorPickBtnText: {
-    fontSize: 18,
-    color: '#0F1419',
-    letterSpacing: 1.5,
-    fontWeight: '900',
-  },
-  colorPickBtnSub: {
-    fontSize: 11,
-    color: '#0F1419',
-    opacity: 0.7,
-    marginTop: 2,
+  restrictionHint: {
+    textAlign: 'center',
+    fontSize: 12,
     fontWeight: '600',
+    color: c.textMuted,
+    marginTop: spacing.xs,
+    fontStyle: 'italic',
   },
   smallBtnDisabled: {
     opacity: 0.4,
