@@ -64,14 +64,16 @@ const renderBottomByRound = (
   styles: ReturnType<typeof makeStyles>
 ) => {
   const metrics = computeSlotMetrics(maxRound);
-  const dynamicSlotStyle = { minHeight: metrics.minHeight };
+  // Use the slot height as the line-height so every slot has identical
+  // vertical footprint regardless of content (text vs finished line).
+  const dynamicSlotStyle = { height: metrics.minHeight };
   const dynamicLineStyle = {
     fontSize: metrics.fontSize,
-    lineHeight: metrics.lineHeight,
+    lineHeight: metrics.minHeight,
   };
   const dynamicLineCompactStyle = {
     fontSize: Math.max(10, metrics.fontSize - 4),
-    lineHeight: Math.max(14, metrics.lineHeight - 4),
+    lineHeight: metrics.minHeight,
   };
   // Render one slot per round (1..maxRound) so all columns line up vertically.
   const slots: React.ReactNode[] = [];
@@ -348,10 +350,8 @@ const makeStyles = (c: ThemeColors) =>
     },
     roundSlot: {
       width: '100%',
-      minHeight: 38,
       alignItems: 'center',
       justifyContent: 'center',
-      paddingVertical: 2,
     },
     bottomItem: {
       fontSize: 20,
@@ -363,20 +363,14 @@ const makeStyles = (c: ThemeColors) =>
     },
     bottomLine: {
       textAlign: 'center',
-      paddingVertical: 3,
-      fontSize: 22,
       fontWeight: '700',
       color: c.textPrimary,
-      lineHeight: 28,
       fontVariant: ['tabular-nums'],
     },
     bottomLineCompact: {
       textAlign: 'center',
-      paddingVertical: 2,
-      fontSize: 16,
       fontWeight: '700',
       color: c.textPrimary,
-      lineHeight: 22,
       fontVariant: ['tabular-nums'],
     },
     bottomSep: {
