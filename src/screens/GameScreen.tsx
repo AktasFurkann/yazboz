@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
   Pressable,
@@ -236,6 +236,48 @@ export const GameScreen: React.FC = () => {
     [setColorWinner]
   );
 
+  const exitConfirmedRef = useRef(false);
+
+  const showExitConfirm = useCallback(
+    (onConfirm: () => void) => {
+      Alert.alert(
+        'Menüye Dön',
+        'Tüm oyun verileri silinecek ve ana menüye döneceksin. Emin misin?',
+        [
+          { text: 'İptal', style: 'cancel', onPress: () => {} },
+          {
+            text: 'Evet, dön',
+            style: 'destructive',
+            onPress: () => {
+              exitConfirmedRef.current = true;
+              resetAll();
+              onConfirm();
+            },
+          },
+        ]
+      );
+    },
+    [resetAll]
+  );
+
+  const handleBackToMenu = useCallback(() => {
+    showExitConfirm(() => {
+      navigation.navigate('Menu');
+    });
+  }, [showExitConfirm, navigation]);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      if (exitConfirmedRef.current) {
+        exitConfirmedRef.current = false;
+        return;
+      }
+      e.preventDefault();
+      showExitConfirm(() => navigation.dispatch(e.data.action));
+    });
+    return unsubscribe;
+  }, [navigation, showExitConfirm]);
+
   const handleColorClear = useCallback(() => {
     if (!hasColorWinner) return;
     Alert.alert(
@@ -258,8 +300,15 @@ export const GameScreen: React.FC = () => {
         <View style={styles.headerLeft}>
           <Text style={styles.title}>Yazboz</Text>
           <View style={styles.subRow}>
-            <Pressable onPress={cycleMode} style={styles.modePill} hitSlop={6}>
-              <Text style={styles.modePillText}>{MODE_LABEL[mode]}</Text>
+            <Pressable
+              onPress={handleBackToMenu}
+              style={({ pressed }) => [
+                styles.backPill,
+                pressed && styles.pressed,
+              ]}
+              hitSlop={6}
+            >
+              <Text style={styles.backPillText}>‹ Menü</Text>
             </Pressable>
             {showColorBadge && (
               <View
@@ -522,6 +571,20 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     color: c.textSecondary,
+    letterSpacing: 0.5,
+  },
+  backPill: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: 4,
+    backgroundColor: c.accentMuted,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: c.accent,
+  },
+  backPillText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: c.accent,
     letterSpacing: 0.5,
   },
   colorBadge: {
