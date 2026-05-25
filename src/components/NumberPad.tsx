@@ -20,6 +20,9 @@ interface Props {
   currentSpecial?: boolean;
   hasRoundColor?: boolean;
   onOpenRoundColor?: () => void;
+  onPenalty?: () => void;
+  canPenalty?: boolean;
+  canAddNumber?: boolean;
 }
 
 const COLOR_OPTIONS = [3, 4, 5, 6];
@@ -54,6 +57,9 @@ const NumberPadComponent: React.FC<Props> = ({
   currentSpecial = false,
   hasRoundColor = false,
   onOpenRoundColor,
+  onPenalty,
+  canPenalty = false,
+  canAddNumber = true,
 }) => {
   const styles = useThemedStyles(makeStyles);
   const [collapsed, setCollapsed] = useState(false);
@@ -82,8 +88,8 @@ const NumberPadComponent: React.FC<Props> = ({
   };
 
   const press = (key: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (key === BACKSPACE_KEY) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       onDraftChange(draft.slice(0, -1));
       return;
     }
@@ -93,6 +99,8 @@ const NumberPadComponent: React.FC<Props> = ({
       onUndoLast();
       return;
     }
+    if (!canAddNumber) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (draft.length >= 4) return;
     onDraftChange(draft + key);
   };
@@ -103,7 +111,14 @@ const NumberPadComponent: React.FC<Props> = ({
     onClearCell();
   };
 
+  const handlePenaltyPress = () => {
+    if (!canPenalty) return;
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    onPenalty?.();
+  };
+
   const handleAdd = () => {
+    if (!canAddNumber) return;
     const values = parseDraft(draft);
     if (values.length === 0) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -255,14 +270,23 @@ const NumberPadComponent: React.FC<Props> = ({
     <View style={styles.container}>
       <View style={styles.topBar}>
         <Pressable
-          onPress={handleClear}
+          onPress={handlePenaltyPress}
+          disabled={!canPenalty}
           style={({ pressed }) => [
-            styles.smallBtn,
-            pressed && styles.pressed,
+            styles.penaltyBtn,
+            !canPenalty && styles.penaltyBtnDisabled,
+            pressed && canPenalty && styles.pressed,
           ]}
           hitSlop={6}
         >
-          <Text style={styles.smallBtnText}>Temizle</Text>
+          <Text
+            style={[
+              styles.penaltyBtnText,
+              !canPenalty && styles.penaltyBtnTextDisabled,
+            ]}
+          >
+            ⚠ CEZA!
+          </Text>
         </Pressable>
 
         <View style={styles.draftBox}>
@@ -277,12 +301,12 @@ const NumberPadComponent: React.FC<Props> = ({
 
         <Pressable
           onPress={handleAdd}
-          disabled={!hasDraft}
+          disabled={!hasDraft || !canAddNumber}
           style={({ pressed }) => [
             styles.smallBtn,
             styles.nextBtn,
-            !hasDraft && styles.smallBtnDisabled,
-            pressed && hasDraft && styles.pressed,
+            (!hasDraft || !canAddNumber) && styles.smallBtnDisabled,
+            pressed && hasDraft && canAddNumber && styles.pressed,
           ]}
           hitSlop={6}
         >
@@ -290,7 +314,7 @@ const NumberPadComponent: React.FC<Props> = ({
             style={[
               styles.smallBtnText,
               styles.nextBtnText,
-              !hasDraft && styles.smallBtnTextDisabled,
+              (!hasDraft || !canAddNumber) && styles.smallBtnTextDisabled,
             ]}
           >
             + EKLE
@@ -317,17 +341,19 @@ const NumberPadComponent: React.FC<Props> = ({
               const isBackspace = key === BACKSPACE_KEY;
               const isAction = isUndo || isBackspace;
               const undoDisabled = isUndo && !canUndo;
+              const digitDisabled = !isAction && !canAddNumber;
+              const disabled = undoDisabled || digitDisabled;
               return (
                 <Pressable
                   key={key}
                   onPress={() => press(key)}
-                  disabled={undoDisabled}
+                  disabled={disabled}
                   style={({ pressed }) => [
                     styles.key,
                     isBackspace && styles.keyBackspace,
                     isUndo && styles.keyUndo,
-                    undoDisabled && styles.keyDisabled,
-                    pressed && !undoDisabled && styles.pressed,
+                    disabled && styles.keyDisabled,
+                    pressed && !disabled && styles.pressed,
                   ]}
                 >
                   <Text
@@ -335,7 +361,7 @@ const NumberPadComponent: React.FC<Props> = ({
                       styles.keyText,
                       isAction && styles.keyActionText,
                       isUndo && styles.keyUndoText,
-                      undoDisabled && styles.keyTextDisabled,
+                      disabled && styles.keyTextDisabled,
                     ]}
                   >
                     {isUndo ? 'Sil' : key}
@@ -349,14 +375,16 @@ const NumberPadComponent: React.FC<Props> = ({
         {hasRoundColor ? (
           <Pressable
             onPress={handleAdd}
-            disabled={!hasDraft}
+            disabled={!hasDraft || !canAddNumber}
             style={({ pressed }) => [
               styles.addBtn,
-              !hasDraft && styles.addBtnDisabled,
-              pressed && styles.pressed,
+              (!hasDraft || !canAddNumber) && styles.addBtnDisabled,
+              pressed && hasDraft && canAddNumber && styles.pressed,
             ]}
           >
-            <Text style={styles.addBtnText}>+ EKLE</Text>
+            <Text style={styles.addBtnText}>
+              {canAddNumber ? '+ EKLE' : 'Sadece CEZA verilebilir'}
+            </Text>
           </Pressable>
         ) : (
           <Pressable
@@ -661,6 +689,31 @@ const makeStyles = (c: ThemeColors) =>
   },
   modeBtnTextActive: {
     color: c.textPrimary,
+  },
+  penaltyBtn: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    backgroundColor: c.negative,
+    borderRadius: radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: c.negative,
+    minWidth: 80,
+  },
+  penaltyBtnDisabled: {
+    backgroundColor: c.surfaceElevated,
+    borderColor: c.border,
+    opacity: 0.5,
+  },
+  penaltyBtnText: {
+    fontSize: 13,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    letterSpacing: 0.8,
+  },
+  penaltyBtnTextDisabled: {
+    color: c.textMuted,
   },
 });
 

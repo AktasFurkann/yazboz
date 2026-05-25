@@ -170,6 +170,25 @@ export const useGame = () => {
     }
   }, [selection, viewingRound, winnerHint]);
 
+  const addPenalty = useCallback(() => {
+    if (selection.side !== 'bottom') return;
+    const colIdx = selection.column;
+    setColumns((prev) =>
+      prev.map((c, idx) => {
+        if (idx !== colIdx) return c;
+        const newEntry: typeof c.bottom[number] = {
+          value: 0,
+          round: viewingRound,
+          marker: 'penalty',
+        };
+        return {
+          ...c,
+          bottom: insertInRoundOrder(c.bottom, [newEntry], viewingRound),
+        };
+      })
+    );
+  }, [selection, viewingRound]);
+
   const clearCurrentCell = useCallback(() => {
     setColumns((prev) =>
       prev.map((col, idx) => {
@@ -436,6 +455,17 @@ export const useGame = () => {
     [columns, selection, viewingRound]
   );
 
+  const canAddNumber = useMemo(() => {
+    if (selection.side === 'top') return true;
+    const col = columns[selection.column];
+    const topHasRound = col.top.some((t) => t.round === viewingRound);
+    if (topHasRound) return false;
+    const normalCount = col.bottom.filter(
+      (e) => e.round === viewingRound && !e.marker
+    ).length;
+    return normalCount === 0;
+  }, [columns, selection, viewingRound]);
+
   const viewingRoundHasData = useMemo(
     () => roundHasAnyData(columns, viewingRound),
     [columns, viewingRound]
@@ -472,6 +502,7 @@ export const useGame = () => {
     setColorWinner,
     clearColorWinner,
     hasColorWinner,
+    addPenalty,
     roundMultipliers,
     currentRoundColor,
     hasRoundColor,
@@ -483,6 +514,7 @@ export const useGame = () => {
     hasColorTopInRound,
     specialFinishes,
     currentRoundIsSpecial,
+    canAddNumber,
   };
 };
 

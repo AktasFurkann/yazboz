@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { radius, spacing, ThemeColors, typography } from '../theme';
 import { useThemedStyles } from '../contexts/ThemeContext';
@@ -13,7 +13,9 @@ interface Props {
   isSelected: boolean;
   selectedSide: Side | null;
   topLocked?: boolean;
+  maxRound?: number;
   multipliersByRound?: Record<number, number>;
+  baseColorsByRound?: Record<number, number>;
   specialFinishes?: Record<number, boolean>;
   onSelect: (column: ColumnId, side: Side) => void;
   onEditName?: (column: ColumnId) => void;
@@ -38,6 +40,95 @@ const formatTopDisplay = (
     .join(',');
 };
 
+type BottomEntryWithMeta = {
+  value: number;
+  round: number;
+  marker?: 'finished' | 'penalty';
+};
+
+const computeSlotMetrics = (
+  maxRound: number
+): { fontSize: number; lineHeight: number; minHeight: number } => {
+  if (maxRound <= 4) return { fontSize: 22, lineHeight: 28, minHeight: 38 };
+  if (maxRound <= 6) return { fontSize: 18, lineHeight: 22, minHeight: 30 };
+  if (maxRound <= 9) return { fontSize: 15, lineHeight: 19, minHeight: 24 };
+  if (maxRound <= 13) return { fontSize: 13, lineHeight: 16, minHeight: 20 };
+  return { fontSize: 11, lineHeight: 14, minHeight: 17 };
+};
+
+const renderBottomByRound = (
+  bottom: BottomEntryWithMeta[],
+  maxRound: number,
+  multipliersByRound: Record<number, number> | undefined,
+  baseColorsByRound: Record<number, number> | undefined,
+  styles: ReturnType<typeof makeStyles>
+) => {
+  const metrics = computeSlotMetrics(maxRound);
+  const dynamicSlotStyle = { minHeight: metrics.minHeight };
+  const dynamicLineStyle = {
+    fontSize: metrics.fontSize,
+    lineHeight: metrics.lineHeight,
+  };
+  const dynamicLineCompactStyle = {
+    fontSize: Math.max(10, metrics.fontSize - 4),
+    lineHeight: Math.max(14, metrics.lineHeight - 4),
+  };
+  // Render one slot per round (1..maxRound) so all columns line up vertically.
+  const slots: React.ReactNode[] = [];
+  for (let r = 1; r <= maxRound; r++) {
+    const entries = bottom.filter((e) => e.round === r);
+    const hasFinished = entries.some((e) => e.marker === 'finished');
+
+    let inner: React.ReactNode = null;
+
+    if (hasFinished) {
+      inner = <View style={styles.finishedLine} />;
+    } else if (entries.length > 0) {
+      const baseColor = baseColorsByRound?.[r] ?? 1;
+      const mult = multipliersByRound?.[r] ?? 1;
+      const penaltyCount = entries.filter((e) => e.marker === 'penalty').length;
+      const normalEntries = entries.filter((e) => !e.marker);
+
+      const parts: React.ReactNode[] = [];
+
+      if (penaltyCount > 0) {
+        const penaltyTotal = baseColor * 100 * penaltyCount;
+        parts.push(
+          <Text key="p" style={styles.penaltyInline}>
+            {penaltyTotal}
+          </Text>
+        );
+      }
+
+      normalEntries.forEach((e, i) => {
+        if (parts.length > 0) {
+          parts.push(<Text key={`sep-${i}`}>{' + '}</Text>);
+        }
+        parts.push(<Text key={`n-${i}`}>{e.value * mult}</Text>);
+      });
+
+      const partCount = (penaltyCount > 0 ? 1 : 0) + normalEntries.length;
+      const lineStyle = [
+        partCount >= 2 ? styles.bottomLineCompact : styles.bottomLine,
+        partCount >= 2 ? dynamicLineCompactStyle : dynamicLineStyle,
+      ];
+
+      inner = (
+        <Text style={lineStyle} numberOfLines={1}>
+          {parts}
+        </Text>
+      );
+    }
+
+    slots.push(
+      <View key={r} style={[styles.roundSlot, dynamicSlotStyle]}>
+        {inner}
+      </View>
+    );
+  }
+  return slots;
+};
+
 const ColumnViewComponent: React.FC<Props> = ({
   index,
   column,
@@ -46,7 +137,9 @@ const ColumnViewComponent: React.FC<Props> = ({
   isSelected,
   selectedSide,
   topLocked = false,
+  maxRound = 1,
   multipliersByRound,
+  baseColorsByRound,
   specialFinishes,
   onSelect,
   onEditName,
@@ -131,23 +224,27 @@ const ColumnViewComponent: React.FC<Props> = ({
         style={[styles.cellBottom, bottomActive && styles.cellActive]}
       >
         <Text style={styles.cellLabel}>ALT · +</Text>
-        <View style={styles.bottomList}>
-          {column.bottom.length === 0 ? (
+        {column.bottom.length === 0 && maxRound <= 1 ? (
+          <View style={styles.bottomList}>
             <Text style={[styles.bottomItem, styles.empty]}>–</Text>
-          ) : (
-            column.bottom.map((e, idx) => {
-              if (e.marker === 'finished') {
-                return <View key={idx} style={styles.finishedLine} />;
-              }
-              const mult = multipliersByRound?.[e.round] ?? 1;
-              return (
-                <Text key={idx} style={styles.bottomItem}>
-                  {e.value * mult}
-                </Text>
-              );
-            })
-          )}
-        </View>
+          </View>
+        ) : (
+          <View style={styles.bottomList}>
+            <ScrollView
+              contentContainerStyle={styles.bottomListContent}
+              showsVerticalScrollIndicator={false}
+              nestedScrollEnabled
+            >
+              {renderBottomByRound(
+                column.bottom,
+                maxRound,
+                multipliersByRound,
+                baseColorsByRound,
+                styles
+              )}
+            </ScrollView>
+          </View>
+        )}
 
         {hasAnyNumbers && (
           <View style={styles.netFooter}>
@@ -244,17 +341,51 @@ const makeStyles = (c: ThemeColors) =>
     bottomList: {
       flex: 1,
       width: '100%',
+    },
+    bottomListContent: {
+      paddingVertical: 4,
       alignItems: 'center',
+    },
+    roundSlot: {
+      width: '100%',
+      minHeight: 38,
+      alignItems: 'center',
+      justifyContent: 'center',
       paddingVertical: 2,
-      overflow: 'hidden',
     },
     bottomItem: {
-      fontSize: 18,
+      fontSize: 20,
       fontWeight: '700',
       color: c.textPrimary,
       fontVariant: ['tabular-nums'],
-      lineHeight: 24,
+      lineHeight: 26,
       textAlign: 'center',
+    },
+    bottomLine: {
+      textAlign: 'center',
+      paddingVertical: 3,
+      fontSize: 22,
+      fontWeight: '700',
+      color: c.textPrimary,
+      lineHeight: 28,
+      fontVariant: ['tabular-nums'],
+    },
+    bottomLineCompact: {
+      textAlign: 'center',
+      paddingVertical: 2,
+      fontSize: 16,
+      fontWeight: '700',
+      color: c.textPrimary,
+      lineHeight: 22,
+      fontVariant: ['tabular-nums'],
+    },
+    bottomSep: {
+      fontWeight: '600',
+      color: c.textMuted,
+    },
+    penaltyInline: {
+      fontWeight: '900',
+      color: c.negative,
     },
     empty: {
       color: c.textMuted,

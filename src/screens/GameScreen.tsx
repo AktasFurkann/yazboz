@@ -15,7 +15,10 @@ import { NumberPad, parseDraft } from '../components/NumberPad';
 import { BannerSlot } from '../components/BannerSlot';
 import { EditNameModal } from '../components/EditNameModal';
 import { ColorPickerModal } from '../components/ColorPickerModal';
-import { computeMultipliersByRound } from '../logic/calculator';
+import {
+  computeBaseColorsByRound,
+  computeMultipliersByRound,
+} from '../logic/calculator';
 import { useGameContext } from '../contexts/GameContext';
 import { radius, spacing, ThemeColors, typography } from '../theme';
 import { useThemedStyles } from '../contexts/ThemeContext';
@@ -49,6 +52,7 @@ export const GameScreen: React.FC = () => {
     setColorWinner,
     clearColorWinner,
     hasColorWinner,
+    addPenalty,
     hasRoundColor,
     currentRoundColor,
     setRoundColor,
@@ -60,6 +64,8 @@ export const GameScreen: React.FC = () => {
     roundMultipliers,
     specialFinishes,
     currentRoundIsSpecial,
+    canAddNumber,
+    deselect,
   } = useGameContext();
 
   const styles = useThemedStyles(makeStyles);
@@ -75,6 +81,11 @@ export const GameScreen: React.FC = () => {
     [columns, mode, roundMultipliers, specialFinishes]
   );
 
+  const baseColorsByRound = React.useMemo(
+    () => computeBaseColorsByRound(columns, mode, roundMultipliers),
+    [columns, mode, roundMultipliers]
+  );
+
   const goToResult = useCallback(() => {
     if (isEmpty) {
       Alert.alert('Boş oyun', 'Hesaplamak için en az bir sayı girmelisiniz.');
@@ -86,8 +97,9 @@ export const GameScreen: React.FC = () => {
   const handleAdd = useCallback(
     (values: number[]) => {
       addNumbers(values);
+      deselect();
     },
-    [addNumbers]
+    [addNumbers, deselect]
   );
 
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
@@ -232,8 +244,9 @@ export const GameScreen: React.FC = () => {
   const handleColorPick = useCallback(
     (value: number, isSpecial: boolean) => {
       setColorWinner(value, isSpecial);
+      deselect();
     },
-    [setColorWinner]
+    [setColorWinner, deselect]
   );
 
   const exitConfirmedRef = useRef(false);
@@ -445,7 +458,9 @@ export const GameScreen: React.FC = () => {
               (hasColorTopInRound || hasRoundColor)
             }
             multipliersByRound={multipliersByRound}
+            baseColorsByRound={baseColorsByRound}
             specialFinishes={specialFinishes}
+            maxRound={maxRound}
             onSelect={handleSelect}
             onEditName={handleEditName}
             onPreviewStart={handlePreviewStart}
@@ -469,6 +484,9 @@ export const GameScreen: React.FC = () => {
           currentSpecial={currentRoundIsSpecial}
           hasRoundColor={mode !== 'renkli-klasik' || hasRoundColor}
           onOpenRoundColor={handleOpenColorPicker}
+          onPenalty={addPenalty}
+          canPenalty={selection.side === 'bottom'}
+          canAddNumber={canAddNumber}
         />
       ) : (
         <View style={styles.selectHintBar}>

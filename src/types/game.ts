@@ -12,7 +12,7 @@ export interface TopEntry {
   round: number;
 }
 
-export type BottomMarker = 'finished';
+export type BottomMarker = 'finished' | 'penalty';
 
 export interface BottomEntry {
   value: number;

@@ -153,6 +153,40 @@ const tests: Array<[string, () => void]> = [
     },
   ],
   [
+    'ceza: sadece ceza varsa color × 100',
+    () => {
+      const columns: Column[] = [
+        { top: [t(5, 1)], bottom: [] }, // winner Siyah(5)
+        { top: [], bottom: [{ value: 0, round: 1, marker: 'penalty' }] }, // ceza
+        { top: [], bottom: [] },
+        { top: [], bottom: [] },
+      ];
+      const r = calculateGame(columns, 'renkli-klasik', null, 1, {}, {});
+      // Ceza: 5 × 100 = 500
+      expect(r.columns[1].net).toEqual(500);
+    },
+  ],
+  [
+    'ceza + alt değer: 500 + 10×5 = 550',
+    () => {
+      const columns: Column[] = [
+        { top: [t(5, 1)], bottom: [] },
+        {
+          top: [],
+          bottom: [
+            { value: 0, round: 1, marker: 'penalty' },
+            b(10, 1),
+          ],
+        },
+        { top: [], bottom: [] },
+        { top: [], bottom: [] },
+      ];
+      const r = calculateGame(columns, 'renkli-klasik', null, 1, {}, {});
+      // Ceza: 500 + bottom: 10×5 = 50 → 550
+      expect(r.columns[1].net).toEqual(550);
+    },
+  ],
+  [
     'ozel bitis vs normal: kontrol',
     () => {
       const columns: Column[] = [

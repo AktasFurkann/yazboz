@@ -13,6 +13,7 @@ export const TOP_MULTIPLIER = -10;
 export const SPECIAL_TOP_MULTIPLIER = -100;
 export const SPECIAL_BOTTOM_BONUS = 2;
 export const SPECIAL_TOP_DISPLAY_FACTOR = 100;
+export const PENALTY_FACTOR = 100;
 
 const isColorMultiplier = (n: number): boolean =>
   n === 3 || n === 4 || n === 5 || n === 6;
@@ -59,6 +60,7 @@ const collectRounds = (columns: Column[]): number[] => {
 const calculateColumn = (
   column: Column,
   multByRound: Map<number, number>,
+  baseColorByRound: Map<number, number>,
   specialFinishes: Record<number, boolean> = {}
 ): ColumnResult => {
   const topSum = column.top.reduce((acc, t) => acc + t.value, 0);
@@ -74,6 +76,11 @@ const calculateColumn = (
   }, 0);
 
   const bottomContribution = column.bottom.reduce((acc, e) => {
+    if (e.marker === 'finished') return acc;
+    if (e.marker === 'penalty') {
+      const baseColor = baseColorByRound.get(e.round) ?? 1;
+      return acc + baseColor * PENALTY_FACTOR;
+    }
     const base = multByRound.get(e.round) ?? 1;
     const bonus = specialFinishes[e.round] ? SPECIAL_BOTTOM_BONUS : 1;
     return acc + e.value * base * bonus;
@@ -99,20 +106,21 @@ export const calculateGame = (
   }
 
   const multByRound = new Map<number, number>();
+  const baseColorByRound = new Map<number, number>();
   for (const r of rounds) {
     if (mode === 'renkli-klasik') {
       const hint = r === viewingRound ? winnerHint : null;
-      multByRound.set(
-        r,
-        detectMultiplierForRound(columns, r, hint, roundMultipliers)
-      );
+      const base = detectMultiplierForRound(columns, r, hint, roundMultipliers);
+      baseColorByRound.set(r, base);
+      multByRound.set(r, base);
     } else {
+      baseColorByRound.set(r, 1);
       multByRound.set(r, 1);
     }
   }
 
   const results = columns.map((col) =>
-    calculateColumn(col, multByRound, specialFinishes)
+    calculateColumn(col, multByRound, baseColorByRound, specialFinishes)
   );
   const grandTotal = results.reduce((acc, r) => acc + r.net, 0);
   const activeMultiplier = multByRound.get(viewingRound) ?? 1;
@@ -192,6 +200,29 @@ export const computeMultipliersByRound = (
         ? detectMultiplierForRound(columns, r, null, roundMultipliers)
         : 1;
     result[r] = specialFinishes[r] ? base * SPECIAL_BOTTOM_BONUS : base;
+  }
+  return result;
+};
+
+export const computeBaseColorsByRound = (
+  columns: Column[],
+  mode: GameMode,
+  roundMultipliers: Record<number, number> = {}
+): Record<number, number> => {
+  const result: Record<number, number> = {};
+  const allRounds = new Set<number>();
+  for (const c of columns) {
+    c.top.forEach((t) => allRounds.add(t.round));
+    c.bottom.forEach((e) => allRounds.add(e.round));
+  }
+  for (const k of Object.keys(roundMultipliers)) {
+    allRounds.add(Number(k));
+  }
+  for (const r of allRounds) {
+    result[r] =
+      mode === 'renkli-klasik'
+        ? detectMultiplierForRound(columns, r, null, roundMultipliers)
+        : 1;
   }
   return result;
 };
