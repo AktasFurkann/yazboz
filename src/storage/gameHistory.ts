@@ -24,6 +24,7 @@ type LegacyColumn = { top: LegacyTop[]; bottom: LegacyBottom[] };
 type LegacyGame = Omit<SavedGame, 'columns' | 'mode'> & {
   columns: LegacyColumn[];
   mode?: SavedGame['mode'];
+  playMode?: SavedGame['playMode'];
   roundMultipliers?: Record<number, number>;
   specialFinishes?: Record<number, boolean>;
   playerNames?: string[];
@@ -49,6 +50,7 @@ const migrateColumn = (col: LegacyColumn): Column => ({
 const migrateGame = (game: LegacyGame): SavedGame => ({
   ...game,
   mode: game.mode ?? 'klasik',
+  playMode: game.playMode ?? 'singles',
   columns: (game.columns ?? []).map(migrateColumn),
   playerNames: game.playerNames ?? [
     'Oyuncu 1',

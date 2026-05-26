@@ -24,7 +24,7 @@ import {
 import { useGameContext } from '../contexts/GameContext';
 import { radius, spacing, ThemeColors, typography } from '../theme';
 import { useThemedStyles } from '../contexts/ThemeContext';
-import { COLUMN_IDS, COLOR_BY_MULTIPLIER, MODE_LABEL } from '../types/game';
+import { COLOR_BY_MULTIPLIER, MODE_LABEL } from '../types/game';
 import type { RootStackParamList } from '../navigation/types';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'Game'>;
@@ -69,20 +69,23 @@ export const GameScreen: React.FC = () => {
     canAddNumber,
     deselect,
     swapColumns,
+    visibleColumnIds,
+    visibleColumnCount,
   } = useGameContext();
 
   const screenWidth = Dimensions.get('window').width;
-  const columnWidth = screenWidth / 4;
+  const columnWidth = screenWidth / Math.max(1, visibleColumnCount);
 
   const handleColumnDrag = useCallback(
     (from: ColumnId, dx: number) => {
       const movement = Math.round(dx / columnWidth);
       if (movement === 0) return;
-      const target = Math.max(0, Math.min(3, from + movement)) as ColumnId;
+      const max = visibleColumnCount - 1;
+      const target = Math.max(0, Math.min(max, from + movement)) as ColumnId;
       if (target === from) return;
       swapColumns(from, target);
     },
-    [columnWidth, swapColumns]
+    [columnWidth, swapColumns, visibleColumnCount]
   );
 
   const styles = useThemedStyles(makeStyles);
@@ -457,7 +460,7 @@ export const GameScreen: React.FC = () => {
       </View>
 
       <View style={styles.columns}>
-        {COLUMN_IDS.map((id) => (
+        {visibleColumnIds.map((id) => (
           <ColumnView
             key={id}
             index={id}

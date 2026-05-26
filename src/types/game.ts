@@ -7,6 +7,18 @@ export type Side = 'top' | 'bottom';
 
 export type GameMode = 'klasik' | 'renkli-klasik';
 
+export type PlayMode = 'singles' | 'pairs';
+
+export const MAX_PLAYERS_BY_MODE: Record<PlayMode, number> = {
+  singles: 4,
+  pairs: 2,
+};
+
+export const PLAY_MODE_LABEL: Record<PlayMode, string> = {
+  singles: 'Tek',
+  pairs: 'Eşli',
+};
+
 export interface TopEntry {
   value: number;
   round: number;
@@ -44,6 +56,7 @@ export interface SavedGame {
   createdAt: number;
   columns: Column[];
   mode: GameMode;
+  playMode?: PlayMode;
   result: GameResult;
   playerNames?: string[];
   roundMultipliers?: Record<number, number>;

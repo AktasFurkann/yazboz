@@ -11,11 +11,12 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BannerSlot } from '../components/BannerSlot';
 import { NameSetupModal } from '../components/NameSetupModal';
+import { PlayModeSelectionModal } from '../components/PlayModeSelectionModal';
 import { useGameContext } from '../contexts/GameContext';
 import { useTheme, useThemedStyles } from '../contexts/ThemeContext';
 import { radius, spacing, ThemeColors, typography } from '../theme';
 import type { RootStackParamList } from '../navigation/types';
-import type { GameMode } from '../types/game';
+import type { GameMode, PlayMode } from '../types/game';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'Menu'>;
 
@@ -66,18 +67,35 @@ export const MenuScreen: React.FC = () => {
   const styles = useThemedStyles(makeStyles);
   const { isDark, toggleTheme } = useTheme();
   const [pendingCategory, setPendingCategory] = useState<Category | null>(null);
+  const [pendingPlayMode, setPendingPlayMode] = useState<PlayMode | null>(null);
 
   const handleCategoryTap = (cat: Category) => {
     if (!cat.enabled || !cat.mode) return;
     setPendingCategory(cat);
   };
 
-  const handleStart = (names: string[]) => {
-    if (!pendingCategory?.mode) return;
-    startNewGame(names, pendingCategory.mode);
+  const handlePickPlayMode = (mode: PlayMode) => {
+    setPendingPlayMode(mode);
+  };
+
+  const handleCancelPlayMode = () => {
     setPendingCategory(null);
+  };
+
+  const handleCancelNames = () => {
+    setPendingPlayMode(null);
+  };
+
+  const handleStart = (names: string[]) => {
+    if (!pendingCategory?.mode || !pendingPlayMode) return;
+    startNewGame(names, pendingCategory.mode, pendingPlayMode);
+    setPendingCategory(null);
+    setPendingPlayMode(null);
     navigation.navigate('Game');
   };
+
+  const playerCount = pendingPlayMode === 'pairs' ? 2 : 4;
+  const placeholderPrefix = pendingPlayMode === 'pairs' ? 'Takım' : 'Oyuncu';
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -154,12 +172,25 @@ export const MenuScreen: React.FC = () => {
 
       <BannerSlot />
 
+      <PlayModeSelectionModal
+        visible={pendingCategory !== null && pendingPlayMode === null}
+        title={pendingCategory ? `${pendingCategory.title} · Tür` : 'Oyun Türü'}
+        onSelect={handlePickPlayMode}
+        onCancel={handleCancelPlayMode}
+      />
+
       <NameSetupModal
-        visible={pendingCategory !== null}
-        initialNames={['', '', '', '']}
-        title={pendingCategory ? `${pendingCategory.title} · Oyuncular` : 'Oyuncular'}
+        visible={pendingPlayMode !== null}
+        initialNames={Array.from({ length: playerCount }, () => '')}
+        count={playerCount}
+        placeholderPrefix={placeholderPrefix}
+        title={
+          pendingPlayMode === 'pairs'
+            ? `${pendingCategory?.title ?? ''} · Takımlar`
+            : `${pendingCategory?.title ?? ''} · Oyuncular`
+        }
         ctaLabel="Oyunu Başlat"
-        onCancel={() => setPendingCategory(null)}
+        onCancel={handleCancelNames}
         onConfirm={handleStart}
       />
     </SafeAreaView>

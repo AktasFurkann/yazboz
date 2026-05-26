@@ -22,7 +22,12 @@ import { useGameContext } from '../contexts/GameContext';
 import { radius, spacing, ThemeColors, typography } from '../theme';
 import { useThemedStyles } from '../contexts/ThemeContext';
 import { saveGame } from '../storage/gameHistory';
-import { COLOR_BY_MULTIPLIER, MODE_LABEL, SavedGame } from '../types/game';
+import {
+  COLOR_BY_MULTIPLIER,
+  MAX_PLAYERS_BY_MODE,
+  MODE_LABEL,
+  SavedGame,
+} from '../types/game';
 import { buildRoundSummaries } from '../logic/calculator';
 import type { RootStackParamList } from '../navigation/types';
 
@@ -44,6 +49,7 @@ export const ResultScreen: React.FC = () => {
     columns: ctxColumns,
     result: ctxResult,
     mode: ctxMode,
+    playMode: ctxPlayMode,
     playerNames: ctxPlayerNames,
     roundMultipliers: ctxRoundMultipliers,
     specialFinishes: ctxSpecialFinishes,
@@ -67,6 +73,8 @@ export const ResultScreen: React.FC = () => {
     (isHistorical ? savedGame.roundMultipliers : ctxRoundMultipliers) ?? {};
   const specialFinishes =
     (isHistorical ? savedGame.specialFinishes : ctxSpecialFinishes) ?? {};
+  const playMode = (isHistorical ? savedGame.playMode : ctxPlayMode) ?? 'singles';
+  const visibleCount = MAX_PLAYERS_BY_MODE[playMode];
 
   const styles = useThemedStyles(makeStyles);
   const title = isHistorical ? 'Geçmiş Oyun' : 'Sonuç';
@@ -97,6 +105,7 @@ export const ResultScreen: React.FC = () => {
       createdAt: Date.now(),
       columns,
       mode,
+      playMode,
       result,
       playerNames,
       roundMultipliers,
@@ -158,7 +167,7 @@ export const ResultScreen: React.FC = () => {
             )}
           </View>
 
-          {rs.players.map((p) => {
+          {rs.players.slice(0, visibleCount).map((p) => {
             const hasData =
               p.isWinner || p.topValues.length > 0 || p.bottomValues.length > 0;
             if (!hasData) return null;
@@ -194,12 +203,12 @@ export const ResultScreen: React.FC = () => {
         </View>
         );
       }),
-    [roundSummaries, specialFinishes]
+    [roundSummaries, specialFinishes, visibleCount]
   );
 
   const cards = useMemo(
     () =>
-      columns.map((col, idx) => {
+      columns.slice(0, visibleCount).map((col, idx) => {
         const r = result.columns[idx];
         return (
           <View key={idx} style={styles.card}>
@@ -244,7 +253,7 @@ export const ResultScreen: React.FC = () => {
           </View>
         );
       }),
-    [columns, result, playerNames]
+    [columns, result, playerNames, visibleCount]
   );
 
   return (

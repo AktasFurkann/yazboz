@@ -1,5 +1,6 @@
 import {
   BottomEntry,
+  BottomMarker,
   COLOR_BY_MULTIPLIER,
   Column,
   ColumnId,
@@ -163,11 +164,13 @@ export const hasEntriesInRound = (
   column: Column,
   round: number,
   side: 'top' | 'bottom',
-  includeMarkers: boolean = false
+  excludeMarkers: BottomMarker[] = []
 ): boolean => {
   if (side === 'top') return column.top.some((t) => t.round === round);
   return column.bottom.some(
-    (e) => e.round === round && (includeMarkers || !e.marker)
+    (e) =>
+      e.round === round &&
+      !(e.marker !== undefined && excludeMarkers.includes(e.marker))
   );
 };
 

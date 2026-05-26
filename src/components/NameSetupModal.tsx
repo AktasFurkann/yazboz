@@ -15,6 +15,8 @@ import { useTheme, useThemedStyles } from '../contexts/ThemeContext';
 interface Props {
   visible: boolean;
   initialNames: string[];
+  count?: number;
+  placeholderPrefix?: string;
   title?: string;
   ctaLabel?: string;
   onCancel: () => void;
@@ -24,6 +26,8 @@ interface Props {
 export const NameSetupModal: React.FC<Props> = ({
   visible,
   initialNames,
+  count,
+  placeholderPrefix = 'Oyuncu',
   title = 'Oyuncu İsimleri',
   ctaLabel = 'Başlat',
   onCancel,
@@ -31,11 +35,18 @@ export const NameSetupModal: React.FC<Props> = ({
 }) => {
   const styles = useThemedStyles(makeStyles);
   const { colors } = useTheme();
-  const [names, setNames] = useState<string[]>(initialNames);
+  const effectiveCount = count ?? initialNames.length;
+  const buildInitial = () =>
+    Array.from(
+      { length: effectiveCount },
+      (_, i) => initialNames[i] ?? ''
+    );
+  const [names, setNames] = useState<string[]>(buildInitial);
 
   useEffect(() => {
-    if (visible) setNames(initialNames);
-  }, [visible, initialNames]);
+    if (visible) setNames(buildInitial());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible, initialNames, effectiveCount]);
 
   const updateAt = (idx: number, val: string) => {
     setNames((prev) => prev.map((n, i) => (i === idx ? val : n)));
@@ -44,7 +55,9 @@ export const NameSetupModal: React.FC<Props> = ({
   const handleConfirm = () => {
     onConfirm(
       names.map((n, i) =>
-        n.trim() ? n.trim() : initialNames[i] || `Oyuncu ${i + 1}`
+        n.trim()
+          ? n.trim()
+          : initialNames[i] || `${placeholderPrefix} ${i + 1}`
       )
     );
   };
@@ -75,7 +88,7 @@ export const NameSetupModal: React.FC<Props> = ({
                 style={styles.input}
                 value={name}
                 onChangeText={(v) => updateAt(idx, v)}
-                placeholder={`Oyuncu ${idx + 1}`}
+                placeholder={`${placeholderPrefix} ${idx + 1}`}
                 placeholderTextColor={colors.textMuted}
                 maxLength={20}
                 autoCorrect={false}

@@ -1,5 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Column, ColumnId, COLUMN_COUNT, GameMode, Side } from '../types/game';
+import {
+  Column,
+  ColumnId,
+  COLUMN_COUNT,
+  GameMode,
+  MAX_PLAYERS_BY_MODE,
+  PlayMode,
+  Side,
+} from '../types/game';
 import {
   calculateGame,
   columnHasColorTopInRound,
@@ -9,7 +17,7 @@ import {
   makeTopEntry,
   roundHasAnyData,
 } from '../logic/calculator';
-import { loadMode, saveMode } from '../storage/settings';
+import { loadMode, loadPlayMode, saveMode, savePlayMode } from '../storage/settings';
 
 export interface GameSelection {
   column: ColumnId;
@@ -32,15 +40,17 @@ const nextSelection = (s: GameSelection): GameSelection => {
 const containsColorValue = (values: number[]): boolean =>
   values.some((v) => v >= 3 && v <= 6);
 
-const removeLastInRound = <T extends { round: number; marker?: unknown }>(
+const removeLastInRound = <
+  T extends { round: number; marker?: string }
+>(
   arr: T[],
   round: number,
-  skipMarkers = false
+  skipMarkers: readonly string[] = []
 ): T[] => {
   for (let i = arr.length - 1; i >= 0; i--) {
     const entry = arr[i];
     if (entry.round !== round) continue;
-    if (skipMarkers && entry.marker) continue;
+    if (entry.marker && skipMarkers.includes(entry.marker)) continue;
     return [...arr.slice(0, i), ...arr.slice(i + 1)];
   }
   return arr;
@@ -71,6 +81,7 @@ export const useGame = () => {
   const [winnerHint, setWinnerHint] = useState<ColumnId | null>(null);
   const [maxRound, setMaxRound] = useState(1);
   const [viewingRound, setViewingRound] = useState(1);
+  const [playMode, setPlayModeState] = useState<PlayMode>('singles');
   const [playerNames, setPlayerNames] = useState<string[]>([
     'Oyuncu 1',
     'Oyuncu 2',
@@ -86,6 +97,23 @@ export const useGame = () => {
 
   useEffect(() => {
     loadMode().then(setModeState);
+    loadPlayMode().then(setPlayModeState);
+  }, []);
+
+  const visibleColumnCount = MAX_PLAYERS_BY_MODE[playMode];
+
+  const visibleColumnIds = useMemo<ColumnId[]>(
+    () =>
+      Array.from(
+        { length: visibleColumnCount },
+        (_, i) => i as ColumnId
+      ),
+    [visibleColumnCount]
+  );
+
+  const setPlayMode = useCallback((next: PlayMode) => {
+    setPlayModeState(next);
+    savePlayMode(next);
   }, []);
 
   const result = useMemo(
@@ -161,7 +189,7 @@ export const useGame = () => {
         }
         return {
           ...col,
-          bottom: removeLastInRound(col.bottom, viewingRound, true),
+          bottom: removeLastInRound(col.bottom, viewingRound, ['finished']),
         };
       })
     );
@@ -383,12 +411,14 @@ export const useGame = () => {
 
   const isCurrentRoundComplete = useMemo(
     () =>
-      columns.every(
-        (c) =>
+      visibleColumnIds.every((idx) => {
+        const c = columns[idx];
+        return (
           c.top.some((t) => t.round === viewingRound) ||
           c.bottom.some((e) => e.round === viewingRound)
-      ),
-    [columns, viewingRound]
+        );
+      }),
+    [columns, viewingRound, visibleColumnIds]
   );
 
   const colorTopColumns = useMemo(
@@ -450,7 +480,7 @@ export const useGame = () => {
   }, []);
 
   const startNewGame = useCallback(
-    (names?: string[], gameMode?: GameMode) => {
+    (names?: string[], gameMode?: GameMode, newPlayMode?: PlayMode) => {
       setColumns(createEmptyColumns(COLUMN_COUNT));
       setSelection(initialSelection);
       setSelectionActive(false);
@@ -459,10 +489,23 @@ export const useGame = () => {
       setViewingRound(1);
       setRoundMultipliers({});
       setSpecialFinishes({});
-      if (names) setAllPlayerNames(names);
+      if (newPlayMode) {
+        setPlayModeState(newPlayMode);
+        savePlayMode(newPlayMode);
+      }
+      if (names) {
+        // names array length = visible count; fill rest with sensible defaults
+        const fullNames = ['', '', '', ''].map((_, i) => {
+          const candidate = (names[i] ?? '').trim();
+          if (candidate) return candidate;
+          if (newPlayMode === 'pairs' && i < 2) return `Takım ${i + 1}`;
+          return `Oyuncu ${i + 1}`;
+        });
+        setPlayerNames(fullNames);
+      }
       if (gameMode) setMode(gameMode);
     },
-    [setAllPlayerNames, setMode]
+    [setMode]
   );
 
   const isOnLastCell = useMemo(() => isLast(selection), [selection]);
@@ -477,7 +520,8 @@ export const useGame = () => {
       hasEntriesInRound(
         columns[selection.column],
         viewingRound,
-        selection.side
+        selection.side,
+        ['finished']
       ),
     [columns, selection, viewingRound]
   );
@@ -543,6 +587,10 @@ export const useGame = () => {
     currentRoundIsSpecial,
     canAddNumber,
     swapColumns,
+    playMode,
+    setPlayMode,
+    visibleColumnIds,
+    visibleColumnCount,
   };
 };
 
