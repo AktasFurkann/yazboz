@@ -14,10 +14,10 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.frknakts.yazboz"
+      "bundleIdentifier": "com.yazboz.app"
     },
     "android": {
-      "package": "com.frknakts.yazboz",
+      "package": "com.yazboz.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundColor": "#F5E6CB"
