@@ -2,7 +2,13 @@
   "permissions": {
     "allow": [
       "Bash(npx --yes eas-cli@latest --version)",
-      "Bash(npx --yes eas-cli@latest whoami)"
+      "Bash(npx --yes eas-cli@latest whoami)",
+      "Bash(curl -sI -L https://aktasfurkann.github.io/yazboz/privacy.html)",
+      "Bash(curl -sI -L https://aktasfurkann.github.io/yazboz/)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(curl -sf -o /dev/null https://aktasfurkann.github.io/yazboz/privacy.html)"
     ]
   },
   "enabledPlugins": {
