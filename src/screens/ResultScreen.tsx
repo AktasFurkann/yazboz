@@ -53,6 +53,8 @@ export const ResultScreen: React.FC = () => {
     playerNames: ctxPlayerNames,
     roundMultipliers: ctxRoundMultipliers,
     specialFinishes: ctxSpecialFinishes,
+    specialKafaVurma: ctxSpecialKafaVurma,
+    targetRounds: ctxTargetRounds,
     resetAll,
   } = useGameContext();
 
@@ -110,11 +112,26 @@ export const ResultScreen: React.FC = () => {
       playerNames,
       roundMultipliers,
       specialFinishes,
+      specialKafaVurma: ctxSpecialKafaVurma,
+      targetRounds: ctxTargetRounds,
     };
     await saveGame(game);
     resetAll();
     navigation.popTo('Game');
-  }, [isHistorical, columns, result, resetAll, navigation]);
+  }, [
+    isHistorical,
+    columns,
+    mode,
+    playMode,
+    result,
+    playerNames,
+    roundMultipliers,
+    specialFinishes,
+    ctxSpecialKafaVurma,
+    ctxTargetRounds,
+    resetAll,
+    navigation,
+  ]);
 
   const handleBack = useCallback(() => {
     if (isHistorical) {
@@ -244,12 +261,6 @@ export const ResultScreen: React.FC = () => {
               <Text style={styles.rowLabel}>Alt toplam</Text>
               <Text style={styles.rowValue}>{r.bottomSum}</Text>
             </View>
-            <View style={styles.row}>
-              <Text style={styles.rowLabel}>Formül</Text>
-              <Text style={styles.formula}>
-                top×-10 + bottom×tur çarpanı = {r.net}
-              </Text>
-            </View>
           </View>
         );
       }),
@@ -303,6 +314,14 @@ export const ResultScreen: React.FC = () => {
       </ScrollView>
 
       <View style={styles.actions}>
+        {isHistorical && savedGame && (
+          <Button
+            label="İncele"
+            onPress={() => navigation.navigate('Inspect', { savedGame })}
+            variant="secondary"
+            style={{ flex: 1 }}
+          />
+        )}
         <Button
           label={isHistorical ? 'Kapat' : 'Yeni Oyun'}
           onPress={handleNewGame}
@@ -509,10 +528,6 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   rowValue: {
     ...typography.number,
     color: c.textPrimary,
-  },
-  formula: {
-    ...typography.caption,
-    color: c.textMuted,
   },
   divider: {
     height: 1,

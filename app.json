@@ -32,6 +32,12 @@
         "projectId": "27e005e0-7aaf-4784-9dd8-75c7f395f7e2"
       }
     },
-    "owner": "furkanaktas"
+    "owner": "furkanaktas",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/27e005e0-7aaf-4784-9dd8-75c7f395f7e2"
+    }
   }
 }

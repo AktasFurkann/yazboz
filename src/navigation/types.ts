@@ -5,4 +5,5 @@ export type RootStackParamList = {
   Game: undefined;
   Result: { savedGame?: SavedGame } | undefined;
   History: undefined;
+  Inspect: { savedGame: SavedGame };
 };

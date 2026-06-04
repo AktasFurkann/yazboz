@@ -5,7 +5,7 @@ export const COLUMN_IDS: readonly ColumnId[] = [0, 1, 2, 3] as const;
 
 export type Side = 'top' | 'bottom';
 
-export type GameMode = 'klasik' | 'renkli-klasik';
+export type GameMode = 'klasik' | 'renkli-klasik' | 'duz-101';
 
 export type PlayMode = 'singles' | 'pairs';
 
@@ -24,7 +24,7 @@ export interface TopEntry {
   round: number;
 }
 
-export type BottomMarker = 'finished' | 'penalty';
+export type BottomMarker = 'finished' | 'penalty' | 'not-opened';
 
 export interface BottomEntry {
   value: number;
@@ -61,8 +61,12 @@ export interface SavedGame {
   playerNames?: string[];
   roundMultipliers?: Record<number, number>;
   specialFinishes?: Record<number, boolean>;
+  specialKafaVurma?: Record<number, boolean>;
   label?: string;
+  targetRounds?: number;
 }
+
+export const DEFAULT_TARGET_ROUNDS = 11;
 
 export interface ColorInfo {
   multiplier: number;
@@ -80,4 +84,5 @@ export const COLOR_BY_MULTIPLIER: Record<number, ColorInfo> = {
 export const MODE_LABEL: Record<GameMode, string> = {
   'klasik': 'Klasik',
   'renkli-klasik': 'Renkli',
+  'duz-101': '101 Okey (katlamasız)',
 };

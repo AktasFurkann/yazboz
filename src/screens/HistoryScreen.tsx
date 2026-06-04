@@ -124,7 +124,9 @@ export const HistoryScreen: React.FC = () => {
               <View style={styles.cardColumns}>
                 {item.result.columns.map((c, idx) => (
                   <View key={idx} style={styles.miniCol}>
-                    <Text style={styles.miniLabel}>S{idx + 1}</Text>
+                    <Text style={styles.miniLabel} numberOfLines={1}>
+                      {item.playerNames?.[idx] ?? `S${idx + 1}`}
+                    </Text>
                     <Text
                       style={[
                         styles.miniValue,
@@ -236,11 +238,16 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   },
   miniCol: {
     alignItems: 'center',
+    flex: 1,
+    paddingHorizontal: 2,
   },
   miniLabel: {
-    fontSize: 10,
-    color: c.textMuted,
-    letterSpacing: 0.5,
+    fontSize: 11,
+    fontWeight: '700',
+    color: c.textSecondary,
+    letterSpacing: 0.3,
+    textAlign: 'center',
+    maxWidth: '100%',
   },
   miniValue: {
     ...typography.number,

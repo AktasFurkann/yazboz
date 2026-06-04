@@ -23,6 +23,14 @@ interface Props {
   onPenalty?: () => void;
   canPenalty?: boolean;
   canAddNumber?: boolean;
+  is101Mode?: boolean;
+  onFinish101?: (okeyle: boolean, kafaVurma: boolean) => void;
+  onOpenSpecial101?: () => void;
+  onMarkNotOpened?: () => void;
+  is101Winner?: boolean;
+  is101NotOpened?: boolean;
+  is101Okeyle?: boolean;
+  is101KafaVurma?: boolean;
 }
 
 const COLOR_OPTIONS = [3, 4, 5, 6];
@@ -60,6 +68,14 @@ const NumberPadComponent: React.FC<Props> = ({
   onPenalty,
   canPenalty = false,
   canAddNumber = true,
+  is101Mode = false,
+  onFinish101,
+  onOpenSpecial101,
+  onMarkNotOpened,
+  is101Winner = false,
+  is101NotOpened = false,
+  is101Okeyle = false,
+  is101KafaVurma = false,
 }) => {
   const styles = useThemedStyles(makeStyles);
   const [collapsed, setCollapsed] = useState(false);
@@ -116,6 +132,24 @@ const NumberPadComponent: React.FC<Props> = ({
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     onPenalty?.();
   };
+
+  const handleNormalFinish = () => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    onFinish101?.(false, false);
+  };
+
+  const handleOpenSpecial = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onOpenSpecial101?.();
+  };
+
+  const handleMarkNotOpened = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    onMarkNotOpened?.();
+  };
+
+  const is101SpecialActive = is101Winner && (is101Okeyle || is101KafaVurma);
+  const specialMult = (is101Okeyle ? 2 : 1) * (is101KafaVurma ? 2 : 1);
 
   const handleAdd = () => {
     if (!canAddNumber) return;
@@ -333,6 +367,73 @@ const NumberPadComponent: React.FC<Props> = ({
         </Pressable>
       </View>
 
+      {is101Mode && (
+        <View style={styles.actionRow101}>
+          <Pressable
+            onPress={handleMarkNotOpened}
+            style={({ pressed }) => [
+              styles.action101Btn,
+              is101NotOpened && styles.action101BtnActive,
+              pressed && styles.pressed,
+            ]}
+          >
+            <Text
+              style={[
+                styles.action101Text,
+                is101NotOpened && styles.action101TextActive,
+              ]}
+            >
+              AÇILAMADI
+            </Text>
+            <Text style={styles.action101Hint}>+202</Text>
+          </Pressable>
+          <Pressable
+            onPress={handleNormalFinish}
+            style={({ pressed }) => [
+              styles.action101Btn,
+              styles.action101BtnFinish,
+              is101Winner && !is101SpecialActive && styles.action101BtnFinishActive,
+              pressed && styles.pressed,
+            ]}
+          >
+            <Text
+              style={[
+                styles.action101Text,
+                styles.action101TextFinish,
+                is101Winner && !is101SpecialActive && styles.action101TextActive,
+              ]}
+            >
+              BİTTİ
+            </Text>
+            <Text style={[styles.action101Hint, styles.action101HintFinish]}>
+              -101
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={handleOpenSpecial}
+            style={({ pressed }) => [
+              styles.action101Btn,
+              styles.action101BtnSpecial,
+              is101SpecialActive && styles.action101BtnSpecialActive,
+              pressed && styles.pressed,
+            ]}
+          >
+            <Text
+              style={[
+                styles.action101Text,
+                styles.action101TextSpecial,
+                is101SpecialActive && styles.action101TextActive,
+              ]}
+            >
+              ⭐ ÖZEL
+            </Text>
+            <Text style={[styles.action101Hint, styles.action101HintSpecial]}>
+              {is101SpecialActive ? `×${specialMult}` : '×2'}
+            </Text>
+          </Pressable>
+        </View>
+      )}
+
       <View style={styles.grid}>
         {DIGITS.map((row, rIdx) => (
           <View key={rIdx} style={styles.row}>
@@ -381,6 +482,7 @@ const NumberPadComponent: React.FC<Props> = ({
 };
 
 const YELLOW = '#FBBF24';
+const RED = '#EF4444';
 
 const makeStyles = (c: ThemeColors) =>
   StyleSheet.create({
@@ -491,9 +593,9 @@ const makeStyles = (c: ThemeColors) =>
     backgroundColor: c.border,
   },
   keyUndo: {
-    backgroundColor: YELLOW + '22',
+    backgroundColor: RED + '22',
     borderWidth: 1,
-    borderColor: YELLOW,
+    borderColor: RED,
   },
   keyDisabled: {
     opacity: 0.35,
@@ -507,7 +609,7 @@ const makeStyles = (c: ThemeColors) =>
   },
   keyUndoText: {
     ...typography.heading,
-    color: YELLOW,
+    color: RED,
     fontWeight: '700',
     letterSpacing: 0.5,
   },
@@ -659,6 +761,69 @@ const makeStyles = (c: ThemeColors) =>
   },
   penaltyBtnTextDisabled: {
     color: c.textMuted,
+  },
+  actionRow101: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+    marginBottom: spacing.xs,
+  },
+  action101Btn: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    backgroundColor: c.surfaceElevated,
+    borderRadius: radius.md,
+    borderWidth: 1.5,
+    borderColor: c.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  action101BtnActive: {
+    backgroundColor: c.accentMuted,
+    borderColor: c.accent,
+  },
+  action101BtnFinish: {
+    backgroundColor: c.accentMuted,
+    borderColor: c.accent,
+  },
+  action101BtnFinishActive: {
+    backgroundColor: c.accent,
+  },
+  action101BtnSpecial: {
+    backgroundColor: '#FBBF2422',
+    borderColor: YELLOW,
+  },
+  action101BtnSpecialActive: {
+    backgroundColor: YELLOW,
+  },
+  action101Text: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: c.textSecondary,
+    letterSpacing: 0.5,
+  },
+  action101TextFinish: {
+    color: c.accent,
+  },
+  action101TextSpecial: {
+    color: YELLOW,
+  },
+  action101TextActive: {
+    color: '#FFFFFF',
+  },
+  action101Hint: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: c.textMuted,
+    marginTop: 2,
+    letterSpacing: 0.5,
+  },
+  action101HintFinish: {
+    color: c.accent,
+    opacity: 0.7,
+  },
+  action101HintSpecial: {
+    color: YELLOW,
+    opacity: 0.8,
   },
 });
 

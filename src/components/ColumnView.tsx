@@ -11,7 +11,7 @@ import {
 import * as Haptics from 'expo-haptics';
 import { radius, spacing, ThemeColors, typography } from '../theme';
 import { useThemedStyles } from '../contexts/ThemeContext';
-import { Column, ColumnId, ColumnResult, Side } from '../types/game';
+import { Column, ColumnId, ColumnResult, GameMode, Side } from '../types/game';
 
 interface Props {
   index: ColumnId;
@@ -25,6 +25,9 @@ interface Props {
   multipliersByRound?: Record<number, number>;
   baseColorsByRound?: Record<number, number>;
   specialFinishes?: Record<number, boolean>;
+  specialKafaVurma?: Record<number, boolean>;
+  readOnly?: boolean;
+  mode?: GameMode;
   onSelect: (column: ColumnId, side: Side) => void;
   onEditName?: (column: ColumnId) => void;
   onPreviewStart?: (column: ColumnId, side: Side) => void;
@@ -52,7 +55,7 @@ const formatTopDisplay = (
 type BottomEntryWithMeta = {
   value: number;
   round: number;
-  marker?: 'finished' | 'penalty';
+  marker?: 'finished' | 'penalty' | 'not-opened';
 };
 
 const computeSlotMetrics = (
@@ -70,7 +73,10 @@ const renderBottomByRound = (
   maxRound: number,
   multipliersByRound: Record<number, number> | undefined,
   baseColorsByRound: Record<number, number> | undefined,
-  styles: ReturnType<typeof makeStyles>
+  styles: ReturnType<typeof makeStyles>,
+  mode?: GameMode,
+  specialFinishes?: Record<number, boolean>,
+  specialKafaVurma?: Record<number, boolean>
 ) => {
   const metrics = computeSlotMetrics(maxRound);
   // Use the slot height as the line-height so every slot has identical
@@ -86,13 +92,70 @@ const renderBottomByRound = (
   };
   // Render one slot per round (1..maxRound) so all columns line up vertically.
   const slots: React.ReactNode[] = [];
+  const is101 = mode === 'duz-101';
   for (let r = 1; r <= maxRound; r++) {
     const entries = bottom.filter((e) => e.round === r);
     const hasFinished = entries.some((e) => e.marker === 'finished');
+    const isSpecial = specialFinishes?.[r] ?? false;
 
     let inner: React.ReactNode = null;
 
-    if (hasFinished) {
+    if (is101) {
+      const penaltyCount = entries.filter((e) => e.marker === 'penalty').length;
+      const notOpenedCount = entries.filter((e) => e.marker === 'not-opened').length;
+      const normalEntries = entries.filter((e) => !e.marker);
+      const okeyle = specialFinishes?.[r] ?? false;
+      const kafa = specialKafaVurma?.[r] ?? false;
+      const mult = (okeyle ? 2 : 1) * (kafa ? 2 : 1);
+
+      const parts: React.ReactNode[] = [];
+
+      if (hasFinished) {
+        const winVal = -101 * mult;
+        parts.push(
+          <Text key="w" style={styles.winValue101}>
+            {winVal}
+          </Text>
+        );
+      }
+      if (notOpenedCount > 0) {
+        const notOpenedTotal = 202 * mult * notOpenedCount;
+        if (parts.length > 0) parts.push(<Text key="sep-no">{' + '}</Text>);
+        parts.push(
+          <Text key="no" style={styles.notOpenedInline}>
+            {notOpenedTotal}
+          </Text>
+        );
+      }
+      if (penaltyCount > 0) {
+        const penaltyTotal = 101 * penaltyCount;
+        if (parts.length > 0) parts.push(<Text key="sep-p">{' + '}</Text>);
+        parts.push(
+          <Text key="p" style={styles.penaltyInline}>
+            {penaltyTotal}
+          </Text>
+        );
+      }
+      normalEntries.forEach((e, i) => {
+        if (parts.length > 0) {
+          parts.push(<Text key={`sep-${i}`}>{' + '}</Text>);
+        }
+        parts.push(<Text key={`n-${i}`}>{e.value * mult}</Text>);
+      });
+
+      if (parts.length > 0) {
+        const partCount = parts.filter((_, idx) => idx % 2 === 0).length;
+        const lineStyle = [
+          partCount >= 2 ? styles.bottomLineCompact : styles.bottomLine,
+          partCount >= 2 ? dynamicLineCompactStyle : dynamicLineStyle,
+        ];
+        inner = (
+          <Text style={lineStyle} numberOfLines={1}>
+            {parts}
+          </Text>
+        );
+      }
+    } else if (hasFinished) {
       inner = <View style={styles.finishedLine} />;
     } else if (entries.length > 0) {
       const baseColor = baseColorsByRound?.[r] ?? 1;
@@ -152,6 +215,9 @@ const ColumnViewComponent: React.FC<Props> = ({
   multipliersByRound,
   baseColorsByRound,
   specialFinishes,
+  specialKafaVurma,
+  readOnly = false,
+  mode,
   onSelect,
   onEditName,
   onPreviewStart,
@@ -166,7 +232,7 @@ const ColumnViewComponent: React.FC<Props> = ({
     PanResponder.create({
       onStartShouldSetPanResponder: () => false,
       onMoveShouldSetPanResponder: (_, g) =>
-        Math.abs(g.dx) > 8 && Math.abs(g.dx) > Math.abs(g.dy),
+        !readOnly && Math.abs(g.dx) > 8 && Math.abs(g.dx) > Math.abs(g.dy),
       onPanResponderGrant: () => {
         setIsDragging(true);
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -194,6 +260,7 @@ const ColumnViewComponent: React.FC<Props> = ({
     })
   ).current;
   const handlePress = (side: Side) => {
+    if (readOnly) return;
     Haptics.selectionAsync();
     onSelect(index, side);
   };
@@ -207,6 +274,7 @@ const ColumnViewComponent: React.FC<Props> = ({
   };
 
   const handleNameTap = () => {
+    if (readOnly) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onEditName?.(index);
   };
@@ -244,35 +312,36 @@ const ColumnViewComponent: React.FC<Props> = ({
         </Pressable>
       </View>
 
-      <Pressable
-        onPress={() => handlePress('top')}
-        onLongPress={() => handleLongPress('top')}
-        onPressOut={() => onPreviewEnd?.()}
-        delayLongPress={250}
-        disabled={topLocked}
-        style={[
-          styles.cellTop,
-          topActive && styles.cellActive,
-          topLocked && styles.cellLocked,
-        ]}
-      >
-        <Text style={styles.cellLabel}>
-          ÜST · ×-10{topLocked ? ' · 🔒' : ''}
-        </Text>
-        <Text
-          style={[
-            styles.topValues,
-            column.top.length === 0 && styles.empty,
-            topLocked && styles.empty,
-          ]}
-          numberOfLines={2}
-          ellipsizeMode="tail"
-        >
-          {formatTopDisplay(column.top, specialFinishes)}
-        </Text>
-      </Pressable>
+      {mode !== 'duz-101' && (
+        <>
+          <Pressable
+            onPress={() => handlePress('top')}
+            onLongPress={() => handleLongPress('top')}
+            onPressOut={() => onPreviewEnd?.()}
+            delayLongPress={250}
+            disabled={topLocked}
+            style={[
+              styles.cellTop,
+              topActive && styles.cellActive,
+              topLocked && styles.cellLocked,
+            ]}
+          >
+            <Text
+              style={[
+                styles.topValues,
+                column.top.length === 0 && styles.empty,
+                topLocked && styles.empty,
+              ]}
+              numberOfLines={2}
+              ellipsizeMode="tail"
+            >
+              {formatTopDisplay(column.top, specialFinishes)}
+            </Text>
+          </Pressable>
 
-      <View style={styles.line} />
+          <View style={styles.line} />
+        </>
+      )}
 
       <Pressable
         onPress={() => handlePress('bottom')}
@@ -281,7 +350,6 @@ const ColumnViewComponent: React.FC<Props> = ({
         delayLongPress={250}
         style={[styles.cellBottom, bottomActive && styles.cellActive]}
       >
-        <Text style={styles.cellLabel}>ALT · +</Text>
         {column.bottom.length === 0 && maxRound <= 1 ? (
           <View style={styles.bottomList}>
             <Text style={[styles.bottomItem, styles.empty]}>–</Text>
@@ -298,7 +366,10 @@ const ColumnViewComponent: React.FC<Props> = ({
                 maxRound,
                 multipliersByRound,
                 baseColorsByRound,
-                styles
+                styles,
+                mode,
+                specialFinishes,
+                specialKafaVurma
               )}
             </ScrollView>
           </View>
@@ -399,13 +470,6 @@ const makeStyles = (c: ThemeColors) =>
     cellLocked: {
       opacity: 0.4,
     },
-    cellLabel: {
-      fontSize: 10,
-      fontWeight: '600',
-      color: c.textMuted,
-      letterSpacing: 0.5,
-      marginBottom: spacing.xs,
-    },
     topValues: {
       fontSize: 18,
       fontWeight: '700',
@@ -453,6 +517,14 @@ const makeStyles = (c: ThemeColors) =>
     penaltyInline: {
       fontWeight: '900',
       color: c.negative,
+    },
+    notOpenedInline: {
+      fontWeight: '900',
+      color: '#FBBF24',
+    },
+    winValue101: {
+      fontWeight: '900',
+      color: c.accent,
     },
     empty: {
       color: c.textMuted,

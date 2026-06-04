@@ -12,6 +12,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BannerSlot } from '../components/BannerSlot';
 import { NameSetupModal } from '../components/NameSetupModal';
 import { PlayModeSelectionModal } from '../components/PlayModeSelectionModal';
+import { RoundCountSelectionModal } from '../components/RoundCountSelectionModal';
 import { useGameContext } from '../contexts/GameContext';
 import { useTheme, useThemedStyles } from '../contexts/ThemeContext';
 import { radius, spacing, ThemeColors, typography } from '../theme';
@@ -47,10 +48,11 @@ const CATEGORIES: Category[] = [
   },
   {
     id: 'duz-101',
-    title: 'Düz 101',
-    subtitle: 'Yakında',
-    mode: null,
-    enabled: false,
+    title: '101 Okey (katlamasız)',
+    subtitle: 'Biten -101 · Açamayan +202 · Açıp kalan = taş toplamı',
+    mode: 'duz-101',
+    enabled: true,
+    accent: '#FBBF24',
   },
   {
     id: '101-klasik',
@@ -68,6 +70,7 @@ export const MenuScreen: React.FC = () => {
   const { isDark, toggleTheme } = useTheme();
   const [pendingCategory, setPendingCategory] = useState<Category | null>(null);
   const [pendingPlayMode, setPendingPlayMode] = useState<PlayMode | null>(null);
+  const [pendingRoundCount, setPendingRoundCount] = useState<number | null>(null);
 
   const handleCategoryTap = (cat: Category) => {
     if (!cat.enabled || !cat.mode) return;
@@ -78,19 +81,39 @@ export const MenuScreen: React.FC = () => {
     setPendingPlayMode(mode);
   };
 
+  const handlePickRoundCount = (n: number) => {
+    setPendingRoundCount(n);
+  };
+
   const handleCancelPlayMode = () => {
     setPendingCategory(null);
   };
 
-  const handleCancelNames = () => {
+  const handleCancelRoundCount = () => {
     setPendingPlayMode(null);
   };
 
+  const handleCancelNames = () => {
+    setPendingRoundCount(null);
+  };
+
   const handleStart = (names: string[]) => {
-    if (!pendingCategory?.mode || !pendingPlayMode) return;
-    startNewGame(names, pendingCategory.mode, pendingPlayMode);
+    if (
+      !pendingCategory?.mode ||
+      !pendingPlayMode ||
+      pendingRoundCount === null
+    ) {
+      return;
+    }
+    startNewGame(
+      names,
+      pendingCategory.mode,
+      pendingPlayMode,
+      pendingRoundCount
+    );
     setPendingCategory(null);
     setPendingPlayMode(null);
+    setPendingRoundCount(null);
     navigation.navigate('Game');
   };
 
@@ -179,8 +202,15 @@ export const MenuScreen: React.FC = () => {
         onCancel={handleCancelPlayMode}
       />
 
+      <RoundCountSelectionModal
+        visible={pendingPlayMode !== null && pendingRoundCount === null}
+        title={pendingCategory ? `${pendingCategory.title} · Tur` : 'Kaç tur?'}
+        onSelect={handlePickRoundCount}
+        onCancel={handleCancelRoundCount}
+      />
+
       <NameSetupModal
-        visible={pendingPlayMode !== null}
+        visible={pendingRoundCount !== null}
         initialNames={Array.from({ length: playerCount }, () => '')}
         count={playerCount}
         placeholderPrefix={placeholderPrefix}

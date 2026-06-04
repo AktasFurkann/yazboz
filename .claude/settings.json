@@ -8,7 +8,13 @@
       "Bash(git add *)",
       "Bash(git commit *)",
       "Bash(git push *)",
-      "Bash(curl -sf -o /dev/null https://aktasfurkann.github.io/yazboz/privacy.html)"
+      "Bash(curl -sf -o /dev/null https://aktasfurkann.github.io/yazboz/privacy.html)",
+      "Bash(npx expo *)",
+      "Bash(eas build:view 099f4906-281d-411f-801a-753d91339d6d)",
+      "Bash(curl -s \"https://api.expo.dev/v2/build/099f4906-281d-411f-801a-753d91339d6d\")",
+      "Bash(eas-cli --version)",
+      "Bash(eas --version)",
+      "Bash(eas update *)"
     ]
   },
   "enabledPlugins": {

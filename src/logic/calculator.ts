@@ -15,6 +15,9 @@ export const SPECIAL_TOP_MULTIPLIER = -100;
 export const SPECIAL_BOTTOM_BONUS = 2;
 export const SPECIAL_TOP_DISPLAY_FACTOR = 100;
 export const PENALTY_FACTOR = 100;
+export const DUZ_101_WIN = -101;
+export const DUZ_101_NOT_OPENED = 202;
+export const DUZ_101_PENALTY = 101;
 
 const isColorMultiplier = (n: number): boolean =>
   n === 3 || n === 4 || n === 5 || n === 6;
@@ -91,14 +94,56 @@ const calculateColumn = (
   return { topSum, bottomSum, net };
 };
 
+const calculate101Column = (
+  column: Column,
+  specialFinishes: Record<number, boolean> = {},
+  specialKafaVurma: Record<number, boolean> = {}
+): ColumnResult => {
+  let net = 0;
+  let bottomSum = 0;
+  for (const e of column.bottom) {
+    const okeyle = specialFinishes[e.round] ?? false;
+    const kafa = specialKafaVurma[e.round] ?? false;
+    const mult = (okeyle ? 2 : 1) * (kafa ? 2 : 1);
+    if (e.marker === 'finished') {
+      net += DUZ_101_WIN * mult;
+    } else if (e.marker === 'not-opened') {
+      net += DUZ_101_NOT_OPENED * mult;
+    } else if (e.marker === 'penalty') {
+      net += DUZ_101_PENALTY;
+    } else {
+      net += e.value * mult;
+      bottomSum += e.value;
+    }
+  }
+  return { topSum: 0, bottomSum, net };
+};
+
 export const calculateGame = (
   columns: Column[],
   mode: GameMode = 'klasik',
   winnerHint: ColumnId | null = null,
   viewingRound: number = 1,
   roundMultipliers: Record<number, number> = {},
-  specialFinishes: Record<number, boolean> = {}
+  specialFinishes: Record<number, boolean> = {},
+  specialKafaVurma: Record<number, boolean> = {}
 ): GameResult => {
+  if (mode === 'duz-101') {
+    const results = columns.map((col) =>
+      calculate101Column(col, specialFinishes, specialKafaVurma)
+    );
+    const grandTotal = results.reduce((acc, r) => acc + r.net, 0);
+    const okeyle = specialFinishes[viewingRound] ?? false;
+    const kafa = specialKafaVurma[viewingRound] ?? false;
+    return {
+      columns: results,
+      grandTotal,
+      mode,
+      multiplier: (okeyle ? 2 : 1) * (kafa ? 2 : 1),
+      multiplierColor: null,
+    };
+  }
+
   const rounds = collectRounds(columns);
   if (!rounds.includes(viewingRound)) rounds.push(viewingRound);
   for (const k of Object.keys(roundMultipliers)) {

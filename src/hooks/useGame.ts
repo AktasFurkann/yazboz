@@ -3,6 +3,7 @@ import {
   Column,
   ColumnId,
   COLUMN_COUNT,
+  DEFAULT_TARGET_ROUNDS,
   GameMode,
   MAX_PLAYERS_BY_MODE,
   PlayMode,
@@ -94,6 +95,15 @@ export const useGame = () => {
   const [specialFinishes, setSpecialFinishes] = useState<
     Record<number, boolean>
   >({});
+  const [targetRounds, setTargetRoundsState] = useState<number>(
+    DEFAULT_TARGET_ROUNDS
+  );
+  const [lastRoundAlertShown, setLastRoundAlertShown] = useState(false);
+  const [showLastRoundAlert, setShowLastRoundAlert] = useState(false);
+  const [specialKafaVurma, setSpecialKafaVurma] = useState<
+    Record<number, boolean>
+  >({});
+  const [gameEndPrompted, setGameEndPrompted] = useState(false);
 
   useEffect(() => {
     loadMode().then(setModeState);
@@ -124,9 +134,18 @@ export const useGame = () => {
         winnerHint,
         viewingRound,
         roundMultipliers,
-        specialFinishes
+        specialFinishes,
+        specialKafaVurma
       ),
-    [columns, mode, winnerHint, viewingRound, roundMultipliers, specialFinishes]
+    [
+      columns,
+      mode,
+      winnerHint,
+      viewingRound,
+      roundMultipliers,
+      specialFinishes,
+      specialKafaVurma,
+    ]
   );
 
   const updateWinnerHint = useCallback(
@@ -150,18 +169,28 @@ export const useGame = () => {
               top: insertInRoundOrder(col.top, newTops, viewingRound),
             };
           }
+          const cleanedBottom =
+            mode === 'duz-101'
+              ? col.bottom.filter(
+                  (e) =>
+                    !(
+                      e.round === viewingRound &&
+                      (e.marker === 'finished' || e.marker === 'not-opened')
+                    )
+                )
+              : col.bottom;
           const newBottoms = values.map((v) =>
             makeBottomEntry(v, viewingRound)
           );
           return {
             ...col,
-            bottom: insertInRoundOrder(col.bottom, newBottoms, viewingRound),
+            bottom: insertInRoundOrder(cleanedBottom, newBottoms, viewingRound),
           };
         })
       );
       updateWinnerHint(selection.column, selection.side, values);
     },
-    [selection, viewingRound, updateWinnerHint]
+    [selection, viewingRound, updateWinnerHint, mode]
   );
 
   const addNumber = useCallback(
@@ -171,8 +200,9 @@ export const useGame = () => {
 
   const removeLast = useCallback(() => {
     const colIdx = selection.column;
-    setColumns((prev) =>
-      prev.map((col, idx) => {
+    const is101Mode = mode === 'duz-101';
+    setColumns((prev) => {
+      const next = prev.map((col, idx) => {
         if (idx !== colIdx) return col;
         if (selection.side === 'top') {
           const newTop = removeLastInRound(col.top, viewingRound);
@@ -187,16 +217,39 @@ export const useGame = () => {
               );
           return { ...col, top: newTop, bottom: newBottom };
         }
+        const skipMarkers = is101Mode ? [] : ['finished'];
         return {
           ...col,
-          bottom: removeLastInRound(col.bottom, viewingRound, ['finished']),
+          bottom: removeLastInRound(col.bottom, viewingRound, skipMarkers),
         };
-      })
-    );
+      });
+      if (is101Mode) {
+        const anyFinished = next.some((c) =>
+          c.bottom.some(
+            (e) => e.round === viewingRound && e.marker === 'finished'
+          )
+        );
+        if (!anyFinished) {
+          setSpecialFinishes((prev) => {
+            if (!(viewingRound in prev)) return prev;
+            const copy = { ...prev };
+            delete copy[viewingRound];
+            return copy;
+          });
+          setSpecialKafaVurma((prev) => {
+            if (!(viewingRound in prev)) return prev;
+            const copy = { ...prev };
+            delete copy[viewingRound];
+            return copy;
+          });
+        }
+      }
+      return next;
+    });
     if (selection.side === 'top' && winnerHint === selection.column) {
       setWinnerHint(null);
     }
-  }, [selection, viewingRound, winnerHint]);
+  }, [selection, viewingRound, winnerHint, mode]);
 
   const addPenalty = useCallback(() => {
     if (selection.side !== 'bottom') return;
@@ -216,6 +269,90 @@ export const useGame = () => {
       })
     );
   }, [selection, viewingRound]);
+
+  const finish101 = useCallback(
+    (okeyle: boolean, kafaVurma: boolean = false) => {
+      const colIdx = selection.column;
+      const round = viewingRound;
+      setColumns((prev) =>
+        prev.map((c, idx) => {
+          if (idx === colIdx) {
+            const others = c.bottom.filter(
+              (e) => e.round !== round || e.marker === 'penalty'
+            );
+            const finishEntry: typeof c.bottom[number] = {
+              value: 0,
+              round,
+              marker: 'finished',
+            };
+            return {
+              ...c,
+              bottom: insertInRoundOrder(others, [finishEntry], round),
+            };
+          }
+          const hadFinished = c.bottom.some(
+            (e) => e.round === round && e.marker === 'finished'
+          );
+          if (!hadFinished) return c;
+          return {
+            ...c,
+            bottom: c.bottom.filter(
+              (e) => !(e.round === round && e.marker === 'finished')
+            ),
+          };
+        })
+      );
+      setSpecialFinishes((prev) => {
+        const next = { ...prev };
+        if (okeyle) next[round] = true;
+        else delete next[round];
+        return next;
+      });
+      setSpecialKafaVurma((prev) => {
+        const next = { ...prev };
+        if (kafaVurma) next[round] = true;
+        else delete next[round];
+        return next;
+      });
+    },
+    [selection.column, viewingRound]
+  );
+
+  const markNotOpened = useCallback(() => {
+    const colIdx = selection.column;
+    const round = viewingRound;
+    setColumns((prev) =>
+      prev.map((c, idx) => {
+        if (idx !== colIdx) return c;
+        const hasNotOpened = c.bottom.some(
+          (e) => e.round === round && e.marker === 'not-opened'
+        );
+        if (hasNotOpened) {
+          return {
+            ...c,
+            bottom: c.bottom.filter(
+              (e) => !(e.round === round && e.marker === 'not-opened')
+            ),
+          };
+        }
+        const others = c.bottom.filter(
+          (e) =>
+            e.round !== round ||
+            e.marker === 'penalty' ||
+            e.marker === 'finished'
+        );
+        const entry: typeof c.bottom[number] = {
+          value: 0,
+          round,
+          marker: 'not-opened',
+        };
+        return {
+          ...c,
+          bottom: insertInRoundOrder(others, [entry], round),
+        };
+      })
+    );
+  }, [selection.column, viewingRound]);
 
   const clearCurrentCell = useCallback(() => {
     setColumns((prev) =>
@@ -252,6 +389,10 @@ export const useGame = () => {
     setViewingRound(1);
     setRoundMultipliers({});
     setSpecialFinishes({});
+    setSpecialKafaVurma({});
+    setLastRoundAlertShown(false);
+    setShowLastRoundAlert(false);
+    setGameEndPrompted(false);
   }, []);
 
   const select = useCallback((column: ColumnId, side: Side) => {
@@ -296,7 +437,19 @@ export const useGame = () => {
     setWinnerHint(null);
     setSelection(initialSelection);
     setSelectionActive(false);
-  }, [maxRound]);
+    if (next === targetRounds && !lastRoundAlertShown) {
+      setShowLastRoundAlert(true);
+      setLastRoundAlertShown(true);
+    }
+  }, [maxRound, targetRounds, lastRoundAlertShown]);
+
+  const dismissLastRoundAlert = useCallback(() => {
+    setShowLastRoundAlert(false);
+  }, []);
+
+  const setTargetRounds = useCallback((n: number) => {
+    setTargetRoundsState(Math.max(1, Math.floor(n)));
+  }, []);
 
   const setColorWinner = useCallback(
     (colorValue: number, isSpecial: boolean = false) => {
@@ -480,7 +633,12 @@ export const useGame = () => {
   }, []);
 
   const startNewGame = useCallback(
-    (names?: string[], gameMode?: GameMode, newPlayMode?: PlayMode) => {
+    (
+      names?: string[],
+      gameMode?: GameMode,
+      newPlayMode?: PlayMode,
+      newTargetRounds?: number
+    ) => {
       setColumns(createEmptyColumns(COLUMN_COUNT));
       setSelection(initialSelection);
       setSelectionActive(false);
@@ -489,6 +647,13 @@ export const useGame = () => {
       setViewingRound(1);
       setRoundMultipliers({});
       setSpecialFinishes({});
+      setSpecialKafaVurma({});
+      setLastRoundAlertShown(false);
+      setShowLastRoundAlert(false);
+      setGameEndPrompted(false);
+      if (typeof newTargetRounds === 'number') {
+        setTargetRoundsState(Math.max(1, Math.floor(newTargetRounds)));
+      }
       if (newPlayMode) {
         setPlayModeState(newPlayMode);
         savePlayMode(newPlayMode);
@@ -516,26 +681,31 @@ export const useGame = () => {
   );
 
   const currentCellHasInRound = useMemo(
-    () =>
-      hasEntriesInRound(
+    () => {
+      const excludeMarkers: ('finished' | 'penalty' | 'not-opened')[] =
+        mode === 'duz-101' ? [] : ['finished'];
+      return hasEntriesInRound(
         columns[selection.column],
         viewingRound,
         selection.side,
-        ['finished']
-      ),
-    [columns, selection, viewingRound]
+        excludeMarkers
+      );
+    },
+    [columns, selection, viewingRound, mode]
   );
 
   const canAddNumber = useMemo(() => {
     if (selection.side === 'top') return true;
     const col = columns[selection.column];
-    const topHasRound = col.top.some((t) => t.round === viewingRound);
-    if (topHasRound) return false;
+    if (mode !== 'duz-101') {
+      const topHasRound = col.top.some((t) => t.round === viewingRound);
+      if (topHasRound) return false;
+    }
     const normalCount = col.bottom.filter(
       (e) => e.round === viewingRound && !e.marker
     ).length;
     return normalCount === 0;
-  }, [columns, selection, viewingRound]);
+  }, [columns, selection, viewingRound, mode]);
 
   const viewingRoundHasData = useMemo(
     () => roundHasAnyData(columns, viewingRound),
@@ -591,6 +761,15 @@ export const useGame = () => {
     setPlayMode,
     visibleColumnIds,
     visibleColumnCount,
+    finish101,
+    markNotOpened,
+    targetRounds,
+    setTargetRounds,
+    showLastRoundAlert,
+    dismissLastRoundAlert,
+    specialKafaVurma,
+    gameEndPrompted,
+    acknowledgeGameEnd: useCallback(() => setGameEndPrompted(true), []),
   };
 };
 

@@ -17,6 +17,9 @@ import { BannerSlot } from '../components/BannerSlot';
 import { EditNameModal } from '../components/EditNameModal';
 import { ColorPickerModal } from '../components/ColorPickerModal';
 import { ConfirmDestructiveModal } from '../components/ConfirmDestructiveModal';
+import { LastRoundAlertModal } from '../components/LastRoundAlertModal';
+import { Special101Modal } from '../components/Special101Modal';
+import { GameEndPromptModal } from '../components/GameEndPromptModal';
 import {
   computeBaseColorsByRound,
   computeMultipliersByRound,
@@ -71,7 +74,16 @@ export const GameScreen: React.FC = () => {
     swapColumns,
     visibleColumnIds,
     visibleColumnCount,
+    finish101,
+    markNotOpened,
+    targetRounds,
+    showLastRoundAlert,
+    dismissLastRoundAlert,
+    specialKafaVurma,
+    gameEndPrompted,
+    acknowledgeGameEnd,
   } = useGameContext();
+  const is101 = mode === 'duz-101';
 
   const screenWidth = Dimensions.get('window').width;
   const columnWidth = screenWidth / Math.max(1, visibleColumnCount);
@@ -178,6 +190,13 @@ export const GameScreen: React.FC = () => {
       );
       return;
     }
+    if (
+      maxRound >= targetRounds &&
+      !gameEndPrompted
+    ) {
+      setGameEndOpen(true);
+      return;
+    }
     if (currentRoundNeedsColor) {
       setPendingAdvance(true);
       setColorPickerOpen(true);
@@ -217,9 +236,9 @@ export const GameScreen: React.FC = () => {
   const handleSelect = useCallback(
     (col: ColumnId, side: Side) => {
       flushDraftToCurrent();
-      select(col, side);
+      select(col, is101 ? 'bottom' : side);
     },
-    [flushDraftToCurrent, select]
+    [flushDraftToCurrent, select, is101]
   );
 
   const [preview, setPreview] = useState<{
@@ -253,6 +272,31 @@ export const GameScreen: React.FC = () => {
 
   const colorInfo = COLOR_BY_MULTIPLIER[result.multiplier];
   const showColorBadge = mode === 'renkli-klasik' && colorInfo != null;
+  const current101Column = columns[selection.column];
+  const is101Winner =
+    is101 &&
+    current101Column.bottom.some(
+      (e) => e.round === viewingRound && e.marker === 'finished'
+    );
+  const is101NotOpened =
+    is101 &&
+    current101Column.bottom.some(
+      (e) => e.round === viewingRound && e.marker === 'not-opened'
+    );
+  const is101Okeyle = is101 && (specialFinishes[viewingRound] ?? false);
+  const is101KafaVurma = is101 && (specialKafaVurma[viewingRound] ?? false);
+
+  const [special101Open, setSpecial101Open] = useState(false);
+  const handleOpenSpecial101 = useCallback(() => setSpecial101Open(true), []);
+  const handleCloseSpecial101 = useCallback(() => setSpecial101Open(false), []);
+  const handleConfirmSpecial101 = useCallback(
+    (okeyle: boolean, kafaVurma: boolean) => {
+      finish101(okeyle, kafaVurma);
+      setSpecial101Open(false);
+    },
+    [finish101]
+  );
+
   const isViewingPast = viewingRound < maxRound;
   const forwardLabel = viewingRound < maxRound ? `Tur ${viewingRound + 1} ›` : '+ Yeni Tur';
   const isColorMode =
@@ -260,6 +304,26 @@ export const GameScreen: React.FC = () => {
 
   const canAdvanceToNewRound =
     viewingRound < maxRound || isCurrentRoundComplete;
+
+  const showBittiButton =
+    !isViewingPast &&
+    maxRound >= targetRounds &&
+    isCurrentRoundComplete &&
+    !gameEndPrompted;
+  const forwardLabelEffective = showBittiButton ? '🏁 BİTTİ' : forwardLabel;
+
+  const [gameEndOpen, setGameEndOpen] = useState(false);
+
+  const handleResultFromEnd = useCallback(() => {
+    setGameEndOpen(false);
+    acknowledgeGameEnd();
+    navigation.navigate('Result');
+  }, [acknowledgeGameEnd, navigation]);
+
+  const handleContinueFromEnd = useCallback(() => {
+    setGameEndOpen(false);
+    acknowledgeGameEnd();
+  }, [acknowledgeGameEnd]);
 
   const handleColorPick = useCallback(
     (value: number, isSpecial: boolean) => {
@@ -454,7 +518,7 @@ export const GameScreen: React.FC = () => {
               !canAdvanceToNewRound && styles.roundForwardTextDisabled,
             ]}
           >
-            {forwardLabel}
+            {forwardLabelEffective}
           </Text>
         </Pressable>
       </View>
@@ -472,14 +536,20 @@ export const GameScreen: React.FC = () => {
               selectionActive && selection.column === id ? selection.side : null
             }
             topLocked={
-              mode === 'renkli-klasik' &&
-              !colorTopColumns[id] &&
-              (hasColorTopInRound || hasRoundColor)
+              is101 ||
+              (mode === 'renkli-klasik' &&
+                (columns[id].bottom.some(
+                  (e) => e.round === viewingRound && !e.marker
+                ) ||
+                  (!colorTopColumns[id] &&
+                    (hasColorTopInRound || hasRoundColor))))
             }
             multipliersByRound={multipliersByRound}
             baseColorsByRound={baseColorsByRound}
             specialFinishes={specialFinishes}
+            specialKafaVurma={specialKafaVurma}
             maxRound={maxRound}
+            mode={mode}
             onSelect={handleSelect}
             onEditName={handleEditName}
             onPreviewStart={handlePreviewStart}
@@ -507,6 +577,14 @@ export const GameScreen: React.FC = () => {
           onPenalty={addPenalty}
           canPenalty={selection.side === 'bottom'}
           canAddNumber={canAddNumber}
+          is101Mode={is101}
+          onFinish101={finish101}
+          onOpenSpecial101={handleOpenSpecial101}
+          onMarkNotOpened={markNotOpened}
+          is101Winner={is101Winner}
+          is101NotOpened={is101NotOpened}
+          is101Okeyle={is101Okeyle}
+          is101KafaVurma={is101KafaVurma}
         />
       ) : (
         <View style={styles.selectHintBar}>
@@ -538,6 +616,31 @@ export const GameScreen: React.FC = () => {
         onCancel={handleCancelExit}
       />
 
+      <LastRoundAlertModal
+        visible={showLastRoundAlert}
+        targetRounds={targetRounds}
+        players={visibleColumnIds.map((id) => ({
+          name: playerNames[id],
+          net: result.columns[id]?.net ?? 0,
+        }))}
+        onDismiss={dismissLastRoundAlert}
+      />
+
+      <Special101Modal
+        visible={special101Open}
+        initialOkeyle={is101Okeyle}
+        initialKafaVurma={is101KafaVurma}
+        onConfirm={handleConfirmSpecial101}
+        onCancel={handleCloseSpecial101}
+      />
+
+      <GameEndPromptModal
+        visible={gameEndOpen}
+        targetRounds={targetRounds}
+        onResult={handleResultFromEnd}
+        onContinue={handleContinueFromEnd}
+      />
+
       <ColorPickerModal
         visible={colorPickerOpen}
         currentValue={currentRoundColor}
@@ -560,11 +663,7 @@ export const GameScreen: React.FC = () => {
           <View style={styles.previewCard}>
             <Text style={styles.previewTitle}>
               {playerNames[preview.column]} ·{' '}
-              {preview.side === 'top'
-                ? 'ÜST (×-10)'
-                : mode === 'renkli-klasik'
-                ? 'ALT (çarpanlı)'
-                : 'ALT'}
+              {preview.side === 'top' ? 'ÜST' : 'ALT'}
             </Text>
             <Text style={styles.previewValues}>
               {preview.side === 'top'

@@ -5,6 +5,7 @@ import { MenuScreen } from '../screens/MenuScreen';
 import { GameScreen } from '../screens/GameScreen';
 import { ResultScreen } from '../screens/ResultScreen';
 import { HistoryScreen } from '../screens/HistoryScreen';
+import { InspectScreen } from '../screens/InspectScreen';
 import { useTheme } from '../contexts/ThemeContext';
 import type { RootStackParamList } from './types';
 
@@ -45,6 +46,7 @@ export const RootNavigator: React.FC = () => {
           options={{ gestureEnabled: false }}
         />
         <Stack.Screen name="History" component={HistoryScreen} />
+        <Stack.Screen name="Inspect" component={InspectScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
