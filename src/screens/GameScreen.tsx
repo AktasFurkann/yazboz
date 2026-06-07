@@ -84,6 +84,7 @@ export const GameScreen: React.FC = () => {
     acknowledgeGameEnd,
     klasikOkeyDeductions,
     finishKlasik,
+    dealerColumn,
   } = useGameContext();
   const is101 = mode === 'duz-101';
   const isKlasik = mode === 'klasik-okey';
@@ -601,6 +602,16 @@ export const GameScreen: React.FC = () => {
         ))}
       </View>
 
+      <View style={styles.dealerRow}>
+        {visibleColumnIds.map((id) => (
+          <View key={id} style={styles.dealerCell}>
+            {id === dealerColumn && (
+              <Text style={styles.dealerStar}>⭐ Dağıtıcı</Text>
+            )}
+          </View>
+        ))}
+      </View>
+
       {selectionActive ? (
         <NumberPad
           onClearCell={handleClearCell}
@@ -908,6 +919,22 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     flexDirection: 'row',
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.sm,
+  },
+  dealerRow: {
+    flexDirection: 'row',
+    paddingHorizontal: spacing.sm,
+    paddingBottom: spacing.xs,
+  },
+  dealerCell: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dealerStar: {
+    fontSize: 11,
+    fontWeight: '900',
+    color: c.textPrimary,
+    letterSpacing: 0.3,
   },
   pressed: { opacity: 0.6 },
   selectHintBar: {

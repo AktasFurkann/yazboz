@@ -751,6 +751,13 @@ export const useGame = () => {
     [columns, viewingRound]
   );
 
+  // Dealer marker rotates by screen position each round and loops:
+  // round 1 → leftmost, round 2 → next right, … then back to the left.
+  const dealerColumn = useMemo<ColumnId>(
+    () => ((viewingRound - 1) % visibleColumnCount) as ColumnId,
+    [viewingRound, visibleColumnCount]
+  );
+
   return {
     columns,
     selection,
@@ -813,6 +820,7 @@ export const useGame = () => {
     setStartValue,
     klasikOkeyDeductions,
     finishKlasik: finish101,
+    dealerColumn,
   };
 };
 
