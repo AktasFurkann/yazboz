@@ -14,7 +14,19 @@
       "Bash(curl -s \"https://api.expo.dev/v2/build/099f4906-281d-411f-801a-753d91339d6d\")",
       "Bash(eas-cli --version)",
       "Bash(eas --version)",
-      "Bash(eas update *)"
+      "Bash(eas update *)",
+      "Bash(curl -sI \"https://www.soundjay.com/misc/sounds/sad-trombone-01.mp3\")",
+      "Bash(curl -sL -o \"c:\\\\Users\\\\furkan\\\\Desktop\\\\yazboz\\\\assets\\\\sounds\\\\test.mp3\" \"https://assets.mixkit.co/active_storage/sfx/2691/2691-preview.mp3\" -w \"HTTP: %{http_code}, Size: %{size_download}\\\\n\")",
+      "WebFetch(domain:mixkit.co)",
+      "Bash(curl -sL \"https://mixkit.co/free-sound-effects/wrong/\" -o /tmp/mixkit_wrong.html)",
+      "Read(//tmp/**)",
+      "Bash(grep -oE 'data-mp-track-title-value=\"[^\"]+\"' /tmp/mixkit_wrong.html | head -10 *)",
+      "Bash(grep -oE 'href=\"[^\"]+/wrong/[^\"]+\"' /tmp/mixkit_wrong.html | head -15 *)",
+      "Bash(curl -sL -o loss.mp3 \"https://assets.mixkit.co/active_storage/sfx/473/473-preview.mp3\" -w \"loss.mp3: HTTP %{http_code}, Size: %{size_download}\\\\n\")",
+      "Bash(curl -sL -o alert.mp3 \"https://assets.mixkit.co/active_storage/sfx/2870/2870-preview.mp3\" -w \"alert.mp3: HTTP %{http_code}, Size: %{size_download}\\\\n\")",
+      "Bash(rm test.mp3)",
+      "Bash(eas build *)",
+      "WebFetch(domain:docs.expo.dev)"
     ]
   },
   "enabledPlugins": {

@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   Alert,
   BackHandler,
@@ -18,6 +18,7 @@ import {
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Button } from '../components/Button';
 import { BannerSlot } from '../components/BannerSlot';
+import { LoserCelebrationModal } from '../components/LoserCelebrationModal';
 import { useGameContext } from '../contexts/GameContext';
 import { radius, spacing, ThemeColors, typography } from '../theme';
 import { useThemedStyles } from '../contexts/ThemeContext';
@@ -75,12 +76,31 @@ export const ResultScreen: React.FC = () => {
     (isHistorical ? savedGame.roundMultipliers : ctxRoundMultipliers) ?? {};
   const specialFinishes =
     (isHistorical ? savedGame.specialFinishes : ctxSpecialFinishes) ?? {};
+  const specialKafaVurma =
+    (isHistorical ? savedGame.specialKafaVurma : ctxSpecialKafaVurma) ?? {};
   const playMode = (isHistorical ? savedGame.playMode : ctxPlayMode) ?? 'singles';
   const visibleCount = MAX_PLAYERS_BY_MODE[playMode];
+  const is101 = mode === 'duz-101';
 
   const styles = useThemedStyles(makeStyles);
   const title = isHistorical ? 'Geçmiş Oyun' : 'Sonuç';
   const colorInfo = COLOR_BY_MULTIPLIER[result.multiplier];
+
+  const loserIdx = useMemo(() => {
+    let idx = 0;
+    let max = result.columns[0]?.net ?? 0;
+    for (let i = 1; i < Math.min(result.columns.length, MAX_PLAYERS_BY_MODE[playMode]); i++) {
+      const n = result.columns[i]?.net ?? 0;
+      if (n > max) {
+        max = n;
+        idx = i;
+      }
+    }
+    return idx;
+  }, [result.columns, playMode]);
+
+  const [loserModalVisible, setLoserModalVisible] = useState(!isHistorical);
+  const dismissLoserModal = useCallback(() => setLoserModalVisible(false), []);
 
   const roundSummaries = useMemo(
     () => buildRoundSummaries(columns, playerNames, mode, roundMultipliers),
@@ -152,18 +172,25 @@ export const ResultScreen: React.FC = () => {
     () =>
       roundSummaries.map((rs) => {
         const isSpecial = specialFinishes[rs.round] ?? false;
+        const isKafa = specialKafaVurma[rs.round] ?? false;
+        const mult101 = (isSpecial ? 2 : 1) * (isKafa ? 2 : 1);
         return (
         <View key={rs.round} style={styles.roundCard}>
           <View style={styles.roundHeader}>
             <View style={styles.roundTitleRow}>
               <Text style={styles.roundTitle}>{rs.round}. Tur</Text>
-              {isSpecial && (
+              {is101 && mult101 > 1 && (
+                <View style={styles.specialBadge}>
+                  <Text style={styles.specialBadgeText}>×{mult101}</Text>
+                </View>
+              )}
+              {!is101 && isSpecial && (
                 <View style={styles.specialBadge}>
                   <Text style={styles.specialBadgeText}>⭐ ÖZEL</Text>
                 </View>
               )}
             </View>
-            {rs.colorHex && rs.colorName && (
+            {!is101 && rs.colorHex && rs.colorName && (
               <View
                 style={[
                   styles.colorBadge,
@@ -184,43 +211,94 @@ export const ResultScreen: React.FC = () => {
             )}
           </View>
 
-          {rs.players.slice(0, visibleCount).map((p) => {
-            const hasData =
-              p.isWinner || p.topValues.length > 0 || p.bottomValues.length > 0;
-            if (!hasData) return null;
-            return (
-              <View key={p.column} style={styles.playerRow}>
-                <Text
-                  style={[
-                    styles.playerName,
-                    p.isWinner && styles.playerNameWinner,
-                  ]}
-                  numberOfLines={1}
-                >
-                  {p.isWinner ? '✓ ' : ''}
-                  {p.playerName}
-                </Text>
-                <Text
-                  style={[
-                    styles.playerValue,
-                    p.isWinner && styles.playerValueWinner,
-                  ]}
-                >
-                  {p.isWinner
-                    ? p.topValues.length > 0
-                      ? `bitti · üst ${p.topValues.join(',')}`
-                      : 'bitti'
-                    : p.bottomValues.length > 0
-                    ? p.bottomValues.join(', ')
-                    : '–'}
-                </Text>
-              </View>
-            );
-          })}
+          {is101
+            ? columns.slice(0, visibleCount).map((col, idx) => {
+                const entries = col.bottom.filter((e) => e.round === rs.round);
+                if (entries.length === 0) return null;
+                const winner = entries.some((e) => e.marker === 'finished');
+                const notOpenedCount = entries.filter(
+                  (e) => e.marker === 'not-opened'
+                ).length;
+                const penaltyCount = entries.filter(
+                  (e) => e.marker === 'penalty'
+                ).length;
+                const normals = entries.filter((e) => !e.marker);
+                const parts: string[] = [];
+                if (winner) parts.push(`${-101 * mult101}`);
+                if (notOpenedCount > 0)
+                  parts.push(`+${202 * mult101 * notOpenedCount}`);
+                normals.forEach((n) => parts.push(`+${n.value * mult101}`));
+                if (penaltyCount > 0)
+                  parts.push(`+${101 * penaltyCount} ceza`);
+                return (
+                  <View key={idx} style={styles.playerRow}>
+                    <Text
+                      style={[
+                        styles.playerName,
+                        winner && styles.playerNameWinner,
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {playerNames[idx]}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.playerValue,
+                        winner && styles.playerValueWinner,
+                      ]}
+                    >
+                      {parts.join(' ')}
+                    </Text>
+                  </View>
+                );
+              })
+            : rs.players.slice(0, visibleCount).map((p) => {
+                const hasData =
+                  p.isWinner ||
+                  p.topValues.length > 0 ||
+                  p.bottomValues.length > 0;
+                if (!hasData) return null;
+                return (
+                  <View key={p.column} style={styles.playerRow}>
+                    <Text
+                      style={[
+                        styles.playerName,
+                        p.isWinner && styles.playerNameWinner,
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {p.isWinner ? '✓ ' : ''}
+                      {p.playerName}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.playerValue,
+                        p.isWinner && styles.playerValueWinner,
+                      ]}
+                    >
+                      {p.isWinner
+                        ? p.topValues.length > 0
+                          ? `bitti · üst ${p.topValues.join(',')}`
+                          : 'bitti'
+                        : p.bottomValues.length > 0
+                        ? p.bottomValues.join(', ')
+                        : '–'}
+                    </Text>
+                  </View>
+                );
+              })}
         </View>
         );
       }),
-    [roundSummaries, specialFinishes, visibleCount]
+    [
+      roundSummaries,
+      specialFinishes,
+      specialKafaVurma,
+      visibleCount,
+      is101,
+      columns,
+      playerNames,
+    ]
   );
 
   const cards = useMemo(
@@ -242,29 +320,35 @@ export const ResultScreen: React.FC = () => {
               </Text>
             </View>
 
-            <View style={styles.row}>
-              <Text style={styles.rowLabel}>Üst</Text>
-              <Text style={styles.rowValue}>{formatTopList(col.top)}</Text>
-            </View>
-            <View style={styles.row}>
-              <Text style={styles.rowLabel}>Alt</Text>
-              <Text style={styles.rowValue}>{formatBottomList(col.bottom)}</Text>
-            </View>
+            {!is101 && (
+              <>
+                <View style={styles.row}>
+                  <Text style={styles.rowLabel}>Üst</Text>
+                  <Text style={styles.rowValue}>{formatTopList(col.top)}</Text>
+                </View>
+                <View style={styles.row}>
+                  <Text style={styles.rowLabel}>Alt</Text>
+                  <Text style={styles.rowValue}>
+                    {formatBottomList(col.bottom)}
+                  </Text>
+                </View>
 
-            <View style={styles.divider} />
+                <View style={styles.divider} />
 
-            <View style={styles.row}>
-              <Text style={styles.rowLabel}>Üst toplam</Text>
-              <Text style={styles.rowValue}>{r.topSum}</Text>
-            </View>
-            <View style={styles.row}>
-              <Text style={styles.rowLabel}>Alt toplam</Text>
-              <Text style={styles.rowValue}>{r.bottomSum}</Text>
-            </View>
+                <View style={styles.row}>
+                  <Text style={styles.rowLabel}>Üst toplam</Text>
+                  <Text style={styles.rowValue}>{r.topSum}</Text>
+                </View>
+                <View style={styles.row}>
+                  <Text style={styles.rowLabel}>Alt toplam</Text>
+                  <Text style={styles.rowValue}>{r.bottomSum}</Text>
+                </View>
+              </>
+            )}
           </View>
         );
       }),
-    [columns, result, playerNames, visibleCount]
+    [columns, result, playerNames, visibleCount, is101]
   );
 
   return (
@@ -314,23 +398,39 @@ export const ResultScreen: React.FC = () => {
       </ScrollView>
 
       <View style={styles.actions}>
-        {isHistorical && savedGame && (
+        {isHistorical && savedGame ? (
+          <>
+            <Button
+              label="Kapat"
+              onPress={handleNewGame}
+              variant="secondary"
+              style={{ flex: 1 }}
+            />
+            <Button
+              label="İncele"
+              onPress={() => navigation.navigate('Inspect', { savedGame })}
+              variant="primary"
+              style={{ flex: 1 }}
+            />
+          </>
+        ) : (
           <Button
-            label="İncele"
-            onPress={() => navigation.navigate('Inspect', { savedGame })}
-            variant="secondary"
+            label="Yeni Oyun"
+            onPress={handleNewGame}
+            variant="primary"
             style={{ flex: 1 }}
           />
         )}
-        <Button
-          label={isHistorical ? 'Kapat' : 'Yeni Oyun'}
-          onPress={handleNewGame}
-          variant="primary"
-          style={{ flex: 1 }}
-        />
       </View>
 
       <BannerSlot />
+
+      <LoserCelebrationModal
+        visible={loserModalVisible}
+        loserName={playerNames[loserIdx] ?? `Oyuncu ${loserIdx + 1}`}
+        loserNet={result.columns[loserIdx]?.net ?? 0}
+        onDismiss={dismissLoserModal}
+      />
     </SafeAreaView>
   );
 };

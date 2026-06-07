@@ -700,6 +700,13 @@ export const useGame = () => {
     if (mode !== 'duz-101') {
       const topHasRound = col.top.some((t) => t.round === viewingRound);
       if (topHasRound) return false;
+    } else {
+      const blocked = col.bottom.some(
+        (e) =>
+          e.round === viewingRound &&
+          (e.marker === 'finished' || e.marker === 'not-opened')
+      );
+      if (blocked) return false;
     }
     const normalCount = col.bottom.filter(
       (e) => e.round === viewingRound && !e.marker

@@ -31,6 +31,7 @@ interface Props {
   is101NotOpened?: boolean;
   is101Okeyle?: boolean;
   is101KafaVurma?: boolean;
+  is101OtherWinner?: boolean;
 }
 
 const COLOR_OPTIONS = [3, 4, 5, 6];
@@ -76,6 +77,7 @@ const NumberPadComponent: React.FC<Props> = ({
   is101NotOpened = false,
   is101Okeyle = false,
   is101KafaVurma = false,
+  is101OtherWinner = false,
 }) => {
   const styles = useThemedStyles(makeStyles);
   const [collapsed, setCollapsed] = useState(false);
@@ -371,29 +373,41 @@ const NumberPadComponent: React.FC<Props> = ({
         <View style={styles.actionRow101}>
           <Pressable
             onPress={handleMarkNotOpened}
+            disabled={is101Winner}
             style={({ pressed }) => [
               styles.action101Btn,
               is101NotOpened && styles.action101BtnActive,
-              pressed && styles.pressed,
+              is101Winner && styles.action101BtnDisabled,
+              pressed && !is101Winner && styles.pressed,
             ]}
           >
             <Text
               style={[
                 styles.action101Text,
                 is101NotOpened && styles.action101TextActive,
+                is101Winner && styles.action101TextDisabled,
               ]}
             >
               AÇILAMADI
             </Text>
-            <Text style={styles.action101Hint}>+202</Text>
+            <Text
+              style={[
+                styles.action101Hint,
+                is101Winner && styles.action101TextDisabled,
+              ]}
+            >
+              +202
+            </Text>
           </Pressable>
           <Pressable
             onPress={handleNormalFinish}
+            disabled={is101OtherWinner}
             style={({ pressed }) => [
               styles.action101Btn,
               styles.action101BtnFinish,
               is101Winner && !is101SpecialActive && styles.action101BtnFinishActive,
-              pressed && styles.pressed,
+              is101OtherWinner && styles.action101BtnDisabled,
+              pressed && !is101OtherWinner && styles.pressed,
             ]}
           >
             <Text
@@ -401,21 +415,30 @@ const NumberPadComponent: React.FC<Props> = ({
                 styles.action101Text,
                 styles.action101TextFinish,
                 is101Winner && !is101SpecialActive && styles.action101TextActive,
+                is101OtherWinner && styles.action101TextDisabled,
               ]}
             >
               BİTTİ
             </Text>
-            <Text style={[styles.action101Hint, styles.action101HintFinish]}>
+            <Text
+              style={[
+                styles.action101Hint,
+                styles.action101HintFinish,
+                is101OtherWinner && styles.action101TextDisabled,
+              ]}
+            >
               -101
             </Text>
           </Pressable>
           <Pressable
             onPress={handleOpenSpecial}
+            disabled={is101OtherWinner}
             style={({ pressed }) => [
               styles.action101Btn,
               styles.action101BtnSpecial,
               is101SpecialActive && styles.action101BtnSpecialActive,
-              pressed && styles.pressed,
+              is101OtherWinner && styles.action101BtnDisabled,
+              pressed && !is101OtherWinner && styles.pressed,
             ]}
           >
             <Text
@@ -423,11 +446,18 @@ const NumberPadComponent: React.FC<Props> = ({
                 styles.action101Text,
                 styles.action101TextSpecial,
                 is101SpecialActive && styles.action101TextActive,
+                is101OtherWinner && styles.action101TextDisabled,
               ]}
             >
               ⭐ ÖZEL
             </Text>
-            <Text style={[styles.action101Hint, styles.action101HintSpecial]}>
+            <Text
+              style={[
+                styles.action101Hint,
+                styles.action101HintSpecial,
+                is101OtherWinner && styles.action101TextDisabled,
+              ]}
+            >
               {is101SpecialActive ? `×${specialMult}` : '×2'}
             </Text>
           </Pressable>
@@ -780,6 +810,12 @@ const makeStyles = (c: ThemeColors) =>
   action101BtnActive: {
     backgroundColor: c.accentMuted,
     borderColor: c.accent,
+  },
+  action101BtnDisabled: {
+    opacity: 0.35,
+  },
+  action101TextDisabled: {
+    color: c.textMuted,
   },
   action101BtnFinish: {
     backgroundColor: c.accentMuted,

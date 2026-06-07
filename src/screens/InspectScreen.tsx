@@ -74,6 +74,13 @@ export const InspectScreen: React.FC = () => {
   const colorInfo = COLOR_BY_MULTIPLIER[result.multiplier];
   const showColorBadge = mode === 'renkli-klasik' && colorInfo != null;
 
+  const cellTopHeight = useMemo(() => {
+    if (mode === 'duz-101') return undefined;
+    const maxTopLen = Math.max(0, ...columns.map((c) => c.top.length));
+    if (maxTopLen === 0) return 54;
+    return maxTopLen > 4 ? 80 : 54;
+  }, [columns, mode]);
+
   const [preview, setPreview] = useState<{ column: ColumnId; side: Side } | null>(null);
 
   const handlePreviewStart = useCallback(
@@ -136,6 +143,7 @@ export const InspectScreen: React.FC = () => {
             maxRound={maxRound}
             readOnly
             mode={mode}
+            cellTopHeight={cellTopHeight}
             onSelect={() => {}}
             onPreviewStart={handlePreviewStart}
             onPreviewEnd={handlePreviewEnd}

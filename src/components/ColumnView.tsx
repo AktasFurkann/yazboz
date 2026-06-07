@@ -28,6 +28,7 @@ interface Props {
   specialKafaVurma?: Record<number, boolean>;
   readOnly?: boolean;
   mode?: GameMode;
+  cellTopHeight?: number;
   onSelect: (column: ColumnId, side: Side) => void;
   onEditName?: (column: ColumnId) => void;
   onPreviewStart?: (column: ColumnId, side: Side) => void;
@@ -218,6 +219,7 @@ const ColumnViewComponent: React.FC<Props> = ({
   specialKafaVurma,
   readOnly = false,
   mode,
+  cellTopHeight,
   onSelect,
   onEditName,
   onPreviewStart,
@@ -273,10 +275,17 @@ const ColumnViewComponent: React.FC<Props> = ({
     onPreviewStart?.(index, side);
   };
 
+  const lastNameTapRef = useRef(0);
   const handleNameTap = () => {
     if (readOnly) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onEditName?.(index);
+    const now = Date.now();
+    if (now - lastNameTapRef.current < 300) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      onEditName?.(index);
+      lastNameTapRef.current = 0;
+    } else {
+      lastNameTapRef.current = now;
+    }
   };
 
   const topActive = isSelected && selectedSide === 'top';
@@ -296,6 +305,7 @@ const ColumnViewComponent: React.FC<Props> = ({
       <View {...panResponder.panHandlers}>
         <Pressable
           onPress={handleNameTap}
+          disabled={readOnly}
           style={({ pressed }) => [styles.header, pressed && styles.pressed]}
           hitSlop={4}
         >
@@ -322,6 +332,7 @@ const ColumnViewComponent: React.FC<Props> = ({
             disabled={topLocked}
             style={[
               styles.cellTop,
+              cellTopHeight != null && { height: cellTopHeight, maxHeight: cellTopHeight },
               topActive && styles.cellActive,
               topLocked && styles.cellLocked,
             ]}

@@ -10,6 +10,7 @@ import {
 import * as Haptics from 'expo-haptics';
 import { radius, spacing, ThemeColors, typography } from '../theme';
 import { useThemedStyles } from '../contexts/ThemeContext';
+import { playSound } from '../utils/sounds';
 
 interface PlayerScore {
   name: string;
@@ -37,6 +38,7 @@ export const LastRoundAlertModal: React.FC<Props> = ({
     if (!visible) return;
     Vibration.vibrate(VIBRATION_PATTERN);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    playSound('alert');
     return () => {
       Vibration.cancel();
     };

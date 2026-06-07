@@ -286,6 +286,23 @@ export const GameScreen: React.FC = () => {
   const is101Okeyle = is101 && (specialFinishes[viewingRound] ?? false);
   const is101KafaVurma = is101 && (specialKafaVurma[viewingRound] ?? false);
 
+  const cellTopHeight = React.useMemo(() => {
+    if (is101) return undefined;
+    const maxTopLen = Math.max(0, ...columns.map((c) => c.top.length));
+    if (maxTopLen === 0) return 54;
+    return maxTopLen > 4 ? 80 : 54;
+  }, [columns, is101]);
+  const is101OtherWinner =
+    is101 &&
+    !is101Winner &&
+    columns.some(
+      (col, idx) =>
+        idx !== selection.column &&
+        col.bottom.some(
+          (e) => e.round === viewingRound && e.marker === 'finished'
+        )
+    );
+
   const [special101Open, setSpecial101Open] = useState(false);
   const handleOpenSpecial101 = useCallback(() => setSpecial101Open(true), []);
   const handleCloseSpecial101 = useCallback(() => setSpecial101Open(false), []);
@@ -550,6 +567,7 @@ export const GameScreen: React.FC = () => {
             specialKafaVurma={specialKafaVurma}
             maxRound={maxRound}
             mode={mode}
+            cellTopHeight={cellTopHeight}
             onSelect={handleSelect}
             onEditName={handleEditName}
             onPreviewStart={handlePreviewStart}
@@ -585,6 +603,7 @@ export const GameScreen: React.FC = () => {
           is101NotOpened={is101NotOpened}
           is101Okeyle={is101Okeyle}
           is101KafaVurma={is101KafaVurma}
+          is101OtherWinner={is101OtherWinner}
         />
       ) : (
         <View style={styles.selectHintBar}>
