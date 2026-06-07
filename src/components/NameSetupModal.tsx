@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import {
-  KeyboardAvoidingView,
   Modal,
-  Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -11,6 +10,7 @@ import {
 } from 'react-native';
 import { radius, spacing, ThemeColors, typography } from '../theme';
 import { useTheme, useThemedStyles } from '../contexts/ThemeContext';
+import { useKeyboardHeight } from '../hooks/useKeyboardHeight';
 
 interface Props {
   visible: boolean;
@@ -35,6 +35,7 @@ export const NameSetupModal: React.FC<Props> = ({
 }) => {
   const styles = useThemedStyles(makeStyles);
   const { colors } = useTheme();
+  const keyboardHeight = useKeyboardHeight();
   const effectiveCount = count ?? initialNames.length;
   const buildInitial = () =>
     Array.from(
@@ -69,10 +70,12 @@ export const NameSetupModal: React.FC<Props> = ({
       animationType="fade"
       onRequestClose={onCancel}
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.overlay}
-      >
+      <View style={[styles.overlay, { paddingBottom: keyboardHeight }]}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
         <View style={styles.card}>
           <Text style={styles.title}>{title}</Text>
           <Text style={styles.subtitle}>
@@ -120,7 +123,8 @@ export const NameSetupModal: React.FC<Props> = ({
             </Pressable>
           </View>
         </View>
-      </KeyboardAvoidingView>
+        </ScrollView>
+      </View>
     </Modal>
   );
 };
@@ -130,9 +134,13 @@ const makeStyles = (c: ThemeColors) =>
     overlay: {
       flex: 1,
       backgroundColor: 'rgba(0,0,0,0.7)',
+    },
+    scrollContent: {
+      flexGrow: 1,
       alignItems: 'center',
       justifyContent: 'center',
       paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.lg,
     },
     card: {
       width: '100%',

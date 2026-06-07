@@ -13,6 +13,7 @@ import { BannerSlot } from '../components/BannerSlot';
 import { NameSetupModal } from '../components/NameSetupModal';
 import { PlayModeSelectionModal } from '../components/PlayModeSelectionModal';
 import { RoundCountSelectionModal } from '../components/RoundCountSelectionModal';
+import { StartValueSelectionModal } from '../components/StartValueSelectionModal';
 import { useGameContext } from '../contexts/GameContext';
 import { useTheme, useThemedStyles } from '../contexts/ThemeContext';
 import { radius, spacing, ThemeColors, typography } from '../theme';
@@ -40,11 +41,12 @@ const CATEGORIES: Category[] = [
     accent: '#3DDC97',
   },
   {
-    id: 'klasik',
-    title: 'Klasik',
-    subtitle: 'Düz hesap (üst ×-10, alt +)',
-    mode: 'klasik',
-    enabled: false,
+    id: 'klasik-okey',
+    title: 'Klasik Okey',
+    subtitle: 'Sayıdan düşmeli · Normal -1 · Okeyle -2 · Okeyle+Çifte -4',
+    mode: 'klasik-okey',
+    enabled: true,
+    accent: '#3B82F6',
   },
   {
     id: 'duz-101',
@@ -71,6 +73,12 @@ export const MenuScreen: React.FC = () => {
   const [pendingCategory, setPendingCategory] = useState<Category | null>(null);
   const [pendingPlayMode, setPendingPlayMode] = useState<PlayMode | null>(null);
   const [pendingRoundCount, setPendingRoundCount] = useState<number | null>(null);
+  const [pendingStartValue, setPendingStartValue] = useState<number | null>(null);
+
+  const isKlasikOkey = pendingCategory?.mode === 'klasik-okey';
+  const configDone = isKlasikOkey
+    ? pendingStartValue !== null
+    : pendingRoundCount !== null;
 
   const handleCategoryTap = (cat: Category) => {
     if (!cat.enabled || !cat.mode) return;
@@ -85,35 +93,38 @@ export const MenuScreen: React.FC = () => {
     setPendingRoundCount(n);
   };
 
+  const handlePickStartValue = (n: number) => {
+    setPendingStartValue(n);
+  };
+
   const handleCancelPlayMode = () => {
     setPendingCategory(null);
   };
 
-  const handleCancelRoundCount = () => {
+  const handleCancelConfig = () => {
     setPendingPlayMode(null);
   };
 
   const handleCancelNames = () => {
     setPendingRoundCount(null);
+    setPendingStartValue(null);
   };
 
   const handleStart = (names: string[]) => {
-    if (
-      !pendingCategory?.mode ||
-      !pendingPlayMode ||
-      pendingRoundCount === null
-    ) {
+    if (!pendingCategory?.mode || !pendingPlayMode || !configDone) {
       return;
     }
     startNewGame(
       names,
       pendingCategory.mode,
       pendingPlayMode,
-      pendingRoundCount
+      pendingRoundCount ?? undefined,
+      pendingStartValue ?? undefined
     );
     setPendingCategory(null);
     setPendingPlayMode(null);
     setPendingRoundCount(null);
+    setPendingStartValue(null);
     navigation.navigate('Game');
   };
 
@@ -203,14 +214,29 @@ export const MenuScreen: React.FC = () => {
       />
 
       <RoundCountSelectionModal
-        visible={pendingPlayMode !== null && pendingRoundCount === null}
+        visible={
+          pendingPlayMode !== null && !isKlasikOkey && pendingRoundCount === null
+        }
         title={pendingCategory ? `${pendingCategory.title} · Tur` : 'Kaç tur?'}
         onSelect={handlePickRoundCount}
-        onCancel={handleCancelRoundCount}
+        onCancel={handleCancelConfig}
+      />
+
+      <StartValueSelectionModal
+        visible={
+          pendingPlayMode !== null && isKlasikOkey && pendingStartValue === null
+        }
+        title={
+          pendingCategory
+            ? `${pendingCategory.title} · Başlangıç`
+            : 'Kaç sayıdan?'
+        }
+        onSelect={handlePickStartValue}
+        onCancel={handleCancelConfig}
       />
 
       <NameSetupModal
-        visible={pendingRoundCount !== null}
+        visible={configDone}
         initialNames={Array.from({ length: playerCount }, () => '')}
         count={playerCount}
         placeholderPrefix={placeholderPrefix}

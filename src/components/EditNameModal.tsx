@@ -1,8 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
-  KeyboardAvoidingView,
   Modal,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -11,6 +9,7 @@ import {
 } from 'react-native';
 import { radius, spacing, ThemeColors, typography } from '../theme';
 import { useTheme, useThemedStyles } from '../contexts/ThemeContext';
+import { useKeyboardHeight } from '../hooks/useKeyboardHeight';
 
 interface Props {
   visible: boolean;
@@ -30,6 +29,7 @@ export const EditNameModal: React.FC<Props> = ({
   const styles = useThemedStyles(makeStyles);
   const { colors } = useTheme();
   const [value, setValue] = useState(initialName);
+  const keyboardHeight = useKeyboardHeight();
 
   useEffect(() => {
     if (visible) setValue(initialName);
@@ -42,10 +42,7 @@ export const EditNameModal: React.FC<Props> = ({
       animationType="fade"
       onRequestClose={onCancel}
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.overlay}
-      >
+      <View style={[styles.overlay, { paddingBottom: keyboardHeight }]}>
         <View style={styles.card}>
           <Text style={styles.title}>
             Oyuncu {playerIndex + 1} İsmi
@@ -84,7 +81,7 @@ export const EditNameModal: React.FC<Props> = ({
             </Pressable>
           </View>
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 };

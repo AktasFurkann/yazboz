@@ -82,8 +82,11 @@ export const GameScreen: React.FC = () => {
     specialKafaVurma,
     gameEndPrompted,
     acknowledgeGameEnd,
+    klasikOkeyDeductions,
+    finishKlasik,
   } = useGameContext();
   const is101 = mode === 'duz-101';
+  const isKlasik = mode === 'klasik-okey';
 
   const screenWidth = Dimensions.get('window').width;
   const columnWidth = screenWidth / Math.max(1, visibleColumnCount);
@@ -185,9 +188,21 @@ export const GameScreen: React.FC = () => {
     }
     if (!isCurrentRoundComplete) {
       Alert.alert(
-        'Tüm oyuncular için veri girilmedi',
-        '4 oyuncudan herhangi birinin bu turdaki cezası ya da bitti işareti eksik. Tüm verileri girdikten sonra yeni tura geçebilirsin.'
+        isKlasik
+          ? 'Kazanan seçilmedi'
+          : 'Tüm oyuncular için veri girilmedi',
+        isKlasik
+          ? 'Bu eli kimin kazandığını (BİTTİ) seçtikten sonra yeni ele geçebilirsin.'
+          : '4 oyuncudan herhangi birinin bu turdaki cezası ya da bitti işareti eksik. Tüm verileri girdikten sonra yeni tura geçebilirsin.'
       );
+      return;
+    }
+    if (isKlasik) {
+      if (klasikGameOver) {
+        setGameEndOpen(true);
+        return;
+      }
+      startNewRound();
       return;
     }
     if (
@@ -236,9 +251,9 @@ export const GameScreen: React.FC = () => {
   const handleSelect = useCallback(
     (col: ColumnId, side: Side) => {
       flushDraftToCurrent();
-      select(col, is101 ? 'bottom' : side);
+      select(col, is101 || isKlasik ? 'bottom' : side);
     },
-    [flushDraftToCurrent, select, is101]
+    [flushDraftToCurrent, select, is101, isKlasik]
   );
 
   const [preview, setPreview] = useState<{
@@ -272,9 +287,10 @@ export const GameScreen: React.FC = () => {
 
   const colorInfo = COLOR_BY_MULTIPLIER[result.multiplier];
   const showColorBadge = mode === 'renkli-klasik' && colorInfo != null;
+  const isCountdown = is101 || isKlasik;
   const current101Column = columns[selection.column];
   const is101Winner =
-    is101 &&
+    isCountdown &&
     current101Column.bottom.some(
       (e) => e.round === viewingRound && e.marker === 'finished'
     );
@@ -283,17 +299,17 @@ export const GameScreen: React.FC = () => {
     current101Column.bottom.some(
       (e) => e.round === viewingRound && e.marker === 'not-opened'
     );
-  const is101Okeyle = is101 && (specialFinishes[viewingRound] ?? false);
-  const is101KafaVurma = is101 && (specialKafaVurma[viewingRound] ?? false);
+  const is101Okeyle = isCountdown && (specialFinishes[viewingRound] ?? false);
+  const is101KafaVurma = isCountdown && (specialKafaVurma[viewingRound] ?? false);
 
   const cellTopHeight = React.useMemo(() => {
-    if (is101) return undefined;
+    if (isCountdown) return undefined;
     const maxTopLen = Math.max(0, ...columns.map((c) => c.top.length));
     if (maxTopLen === 0) return 54;
     return maxTopLen > 4 ? 80 : 54;
-  }, [columns, is101]);
+  }, [columns, isCountdown]);
   const is101OtherWinner =
-    is101 &&
+    isCountdown &&
     !is101Winner &&
     columns.some(
       (col, idx) =>
@@ -302,6 +318,13 @@ export const GameScreen: React.FC = () => {
           (e) => e.round === viewingRound && e.marker === 'finished'
         )
     );
+
+  const klasikGameOver =
+    isKlasik &&
+    !gameEndPrompted &&
+    result.columns
+      .slice(0, visibleColumnCount)
+      .some((c) => c.net <= 0);
 
   const [special101Open, setSpecial101Open] = useState(false);
   const handleOpenSpecial101 = useCallback(() => setSpecial101Open(true), []);
@@ -324,9 +347,9 @@ export const GameScreen: React.FC = () => {
 
   const showBittiButton =
     !isViewingPast &&
-    maxRound >= targetRounds &&
     isCurrentRoundComplete &&
-    !gameEndPrompted;
+    !gameEndPrompted &&
+    (klasikGameOver || (!isKlasik && maxRound >= targetRounds));
   const forwardLabelEffective = showBittiButton ? '🏁 BİTTİ' : forwardLabel;
 
   const [gameEndOpen, setGameEndOpen] = useState(false);
@@ -449,13 +472,13 @@ export const GameScreen: React.FC = () => {
                 <Text style={styles.specialBadgeText}>⭐ ÖZEL</Text>
               </View>
             )}
-            <Text style={styles.cellTag} numberOfLines={1}>
-              {selectionActive
-                ? `${playerNames[selection.column]} · ${
-                    selection.side === 'top' ? 'Üst' : 'Alt'
-                  }`
-                : 'bir hücreye dokun'}
-            </Text>
+            {selectionActive && (
+              <Text style={styles.cellTag} numberOfLines={1}>
+                {`${playerNames[selection.column]} · ${
+                  selection.side === 'top' ? 'Üst' : 'Alt'
+                }`}
+              </Text>
+            )}
           </View>
         </View>
         <View style={styles.headerActions}>
@@ -565,6 +588,7 @@ export const GameScreen: React.FC = () => {
             baseColorsByRound={baseColorsByRound}
             specialFinishes={specialFinishes}
             specialKafaVurma={specialKafaVurma}
+            klasikDeductions={klasikOkeyDeductions}
             maxRound={maxRound}
             mode={mode}
             cellTopHeight={cellTopHeight}
@@ -596,7 +620,8 @@ export const GameScreen: React.FC = () => {
           canPenalty={selection.side === 'bottom'}
           canAddNumber={canAddNumber}
           is101Mode={is101}
-          onFinish101={finish101}
+          isKlasikOkeyMode={isKlasik}
+          onFinish101={isKlasik ? finishKlasik : finish101}
           onOpenSpecial101={handleOpenSpecial101}
           onMarkNotOpened={markNotOpened}
           is101Winner={is101Winner}
@@ -649,6 +674,10 @@ export const GameScreen: React.FC = () => {
         visible={special101Open}
         initialOkeyle={is101Okeyle}
         initialKafaVurma={is101KafaVurma}
+        okeyleLabel={isKlasik ? 'Okeyle' : 'Okeyle / Çiftle'}
+        kafaVurmaLabel={isKlasik ? 'Çifte' : 'Açarak (kafa vurma)'}
+        winBase={isKlasik ? -1 : -101}
+        winSuffix={isKlasik ? 'Diğerleri:' : 'Biten:'}
         onConfirm={handleConfirmSpecial101}
         onCancel={handleCloseSpecial101}
       />
@@ -656,6 +685,11 @@ export const GameScreen: React.FC = () => {
       <GameEndPromptModal
         visible={gameEndOpen}
         targetRounds={targetRounds}
+        message={
+          isKlasik
+            ? 'Bir oyuncu 0 veya altına düştü. Devam etmek istiyor musunuz?'
+            : undefined
+        }
         onResult={handleResultFromEnd}
         onContinue={handleContinueFromEnd}
       />

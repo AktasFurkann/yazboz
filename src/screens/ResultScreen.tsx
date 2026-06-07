@@ -29,7 +29,11 @@ import {
   MODE_LABEL,
   SavedGame,
 } from '../types/game';
-import { buildRoundSummaries } from '../logic/calculator';
+import {
+  buildRoundSummaries,
+  computeBaseColorsByRound,
+  computeMultipliersByRound,
+} from '../logic/calculator';
 import type { RootStackParamList } from '../navigation/types';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'Result'>;
@@ -37,11 +41,6 @@ type Rt = RouteProp<RootStackParamList, 'Result'>;
 
 const formatTopList = (entries: { value: number; round: number }[]): string =>
   entries.length === 0 ? '–' : entries.map((t) => t.value).join(', ');
-
-const formatBottomList = (
-  entries: { value: number; round: number }[]
-): string =>
-  entries.length === 0 ? '–' : entries.map((e) => e.value).join(', ');
 
 export const ResultScreen: React.FC = () => {
   const navigation = useNavigation<Nav>();
@@ -56,6 +55,7 @@ export const ResultScreen: React.FC = () => {
     specialFinishes: ctxSpecialFinishes,
     specialKafaVurma: ctxSpecialKafaVurma,
     targetRounds: ctxTargetRounds,
+    startValue: ctxStartValue,
     resetAll,
   } = useGameContext();
 
@@ -81,26 +81,153 @@ export const ResultScreen: React.FC = () => {
   const playMode = (isHistorical ? savedGame.playMode : ctxPlayMode) ?? 'singles';
   const visibleCount = MAX_PLAYERS_BY_MODE[playMode];
   const is101 = mode === 'duz-101';
+  const isKlasik = mode === 'klasik-okey';
+  const noTop = is101 || isKlasik;
 
   const styles = useThemedStyles(makeStyles);
   const title = isHistorical ? 'Geçmiş Oyun' : 'Sonuç';
   const colorInfo = COLOR_BY_MULTIPLIER[result.multiplier];
 
-  const loserIdx = useMemo(() => {
-    let idx = 0;
-    let max = result.columns[0]?.net ?? 0;
-    for (let i = 1; i < Math.min(result.columns.length, MAX_PLAYERS_BY_MODE[playMode]); i++) {
-      const n = result.columns[i]?.net ?? 0;
-      if (n > max) {
-        max = n;
-        idx = i;
-      }
+  const losers = useMemo(() => {
+    const count = Math.min(result.columns.length, MAX_PLAYERS_BY_MODE[playMode]);
+    const nets = Array.from({ length: count }, (_, i) => ({
+      idx: i,
+      net: result.columns[i]?.net ?? 0,
+    }));
+    if (nets.length === 0) return [] as { idx: number; net: number }[];
+
+    if (isKlasik) {
+      // Anyone at 0 or below has lost; if multiple, list them all.
+      const fallen = nets.filter((n) => n.net <= 0);
+      if (fallen.length > 0) return fallen;
+      // No one fell yet — show the player closest to losing (lowest remaining).
+      const min = Math.min(...nets.map((n) => n.net));
+      return nets.filter((n) => n.net === min);
     }
-    return idx;
-  }, [result.columns, playMode]);
+
+    // Other modes: highest score loses (ties → all of them).
+    const max = Math.max(...nets.map((n) => n.net));
+    return nets.filter((n) => n.net === max);
+  }, [result.columns, playMode, isKlasik]);
+
+  const loserEntries = useMemo(
+    () =>
+      losers.map((l) => ({
+        name: playerNames[l.idx] ?? `Oyuncu ${l.idx + 1}`,
+        net: l.net,
+      })),
+    [losers, playerNames]
+  );
 
   const [loserModalVisible, setLoserModalVisible] = useState(!isHistorical);
   const dismissLoserModal = useCallback(() => setLoserModalVisible(false), []);
+
+  const baseColorsByRound = useMemo(
+    () => computeBaseColorsByRound(columns, mode, roundMultipliers),
+    [columns, mode, roundMultipliers]
+  );
+  const multByRound = useMemo(
+    () =>
+      computeMultipliersByRound(
+        columns,
+        mode,
+        roundMultipliers,
+        specialFinishes
+      ),
+    [columns, mode, roundMultipliers, specialFinishes]
+  );
+
+  // Penalty entries are stored as value:0; their real cost is floorColor×100.
+  // Render the per-round bottom contributions, penalties shown in red.
+  const renderBottomForRound = useCallback(
+    (col: (typeof columns)[number], round: number): React.ReactNode => {
+      const entries = col.bottom.filter((e) => e.round === round);
+      if (entries.some((e) => e.marker === 'finished')) {
+        const tops = col.top.filter((t) => t.round === round);
+        return tops.length > 0
+          ? `bitti · üst ${tops.map((t) => t.value).join(',')}`
+          : 'bitti';
+      }
+      const baseColor = baseColorsByRound[round] ?? 1;
+      const mult = multByRound[round] ?? 1;
+      const penaltyCount = entries.filter((e) => e.marker === 'penalty').length;
+      const normals = entries.filter((e) => !e.marker);
+      const nodes: React.ReactNode[] = [];
+      if (penaltyCount > 0) {
+        nodes.push(
+          <Text key="p" style={styles.penaltyValue}>
+            {baseColor * 100 * penaltyCount}
+          </Text>
+        );
+      }
+      normals.forEach((e, i) => {
+        if (nodes.length > 0) nodes.push(<Text key={`s${i}`}> + </Text>);
+        nodes.push(<Text key={`n${i}`}>{e.value * mult}</Text>);
+      });
+      return nodes.length > 0 ? nodes : '–';
+    },
+    [baseColorsByRound, multByRound, styles.penaltyValue]
+  );
+
+  // Penalty-aware list of all bottom values across rounds, penalties in red.
+  const renderAlt = useCallback(
+    (col: (typeof columns)[number]): React.ReactNode => {
+      const rounds = Array.from(
+        new Set(col.bottom.map((e) => e.round))
+      ).sort((a, b) => a - b);
+      const nodes: React.ReactNode[] = [];
+      for (const r of rounds) {
+        const entries = col.bottom.filter((e) => e.round === r);
+        if (entries.some((e) => e.marker === 'finished')) continue;
+        const baseColor = baseColorsByRound[r] ?? 1;
+        const mult = multByRound[r] ?? 1;
+        const penaltyCount = entries.filter(
+          (e) => e.marker === 'penalty'
+        ).length;
+        if (penaltyCount > 0) {
+          if (nodes.length > 0) nodes.push(<Text key={`as${r}`}>, </Text>);
+          nodes.push(
+            <Text key={`ap${r}`} style={styles.penaltyValue}>
+              {penaltyCount * baseColor * 100}
+            </Text>
+          );
+        }
+        entries
+          .filter((e) => !e.marker)
+          .forEach((e, i) => {
+            if (nodes.length > 0) nodes.push(<Text key={`asn${r}-${i}`}>, </Text>);
+            nodes.push(<Text key={`an${r}-${i}`}>{e.value * mult}</Text>);
+          });
+      }
+      return nodes.length > 0 ? nodes : '–';
+    },
+    [baseColorsByRound, multByRound, styles.penaltyValue]
+  );
+
+  // Full bottom contribution (penalty-aware) summed across all rounds.
+  const bottomTotal = useCallback(
+    (col: (typeof columns)[number]): number => {
+      const rounds = Array.from(
+        new Set(col.bottom.map((e) => e.round))
+      );
+      let total = 0;
+      for (const r of rounds) {
+        const entries = col.bottom.filter((e) => e.round === r);
+        if (entries.some((e) => e.marker === 'finished')) continue;
+        const baseColor = baseColorsByRound[r] ?? 1;
+        const mult = multByRound[r] ?? 1;
+        const penaltyCount = entries.filter(
+          (e) => e.marker === 'penalty'
+        ).length;
+        total += penaltyCount * baseColor * 100;
+        entries
+          .filter((e) => !e.marker)
+          .forEach((e) => (total += e.value * mult));
+      }
+      return total;
+    },
+    [baseColorsByRound, multByRound]
+  );
 
   const roundSummaries = useMemo(
     () => buildRoundSummaries(columns, playerNames, mode, roundMultipliers),
@@ -134,6 +261,7 @@ export const ResultScreen: React.FC = () => {
       specialFinishes,
       specialKafaVurma: ctxSpecialKafaVurma,
       targetRounds: ctxTargetRounds,
+      startValue: ctxStartValue,
     };
     await saveGame(game);
     resetAll();
@@ -149,6 +277,7 @@ export const ResultScreen: React.FC = () => {
     specialFinishes,
     ctxSpecialKafaVurma,
     ctxTargetRounds,
+    ctxStartValue,
     resetAll,
     navigation,
   ]);
@@ -179,18 +308,18 @@ export const ResultScreen: React.FC = () => {
           <View style={styles.roundHeader}>
             <View style={styles.roundTitleRow}>
               <Text style={styles.roundTitle}>{rs.round}. Tur</Text>
-              {is101 && mult101 > 1 && (
+              {noTop && mult101 > 1 && (
                 <View style={styles.specialBadge}>
                   <Text style={styles.specialBadgeText}>×{mult101}</Text>
                 </View>
               )}
-              {!is101 && isSpecial && (
+              {!noTop && isSpecial && (
                 <View style={styles.specialBadge}>
                   <Text style={styles.specialBadgeText}>⭐ ÖZEL</Text>
                 </View>
               )}
             </View>
-            {!is101 && rs.colorHex && rs.colorName && (
+            {!noTop && rs.colorHex && rs.colorName && (
               <View
                 style={[
                   styles.colorBadge,
@@ -211,7 +340,44 @@ export const ResultScreen: React.FC = () => {
             )}
           </View>
 
-          {is101
+          {isKlasik
+            ? (() => {
+                const hasWinner = columns
+                  .slice(0, visibleCount)
+                  .some((col) =>
+                    col.bottom.some(
+                      (e) => e.round === rs.round && e.marker === 'finished'
+                    )
+                  );
+                if (!hasWinner) return null;
+                return columns.slice(0, visibleCount).map((col, idx) => {
+                  const winner = col.bottom.some(
+                    (e) => e.round === rs.round && e.marker === 'finished'
+                  );
+                  return (
+                    <View key={idx} style={styles.playerRow}>
+                      <Text
+                        style={[
+                          styles.playerName,
+                          winner && styles.playerNameWinner,
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {playerNames[idx]}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.playerValue,
+                          winner && styles.playerValueWinner,
+                        ]}
+                      >
+                        {winner ? 'BİTTİ' : `-${mult101}`}
+                      </Text>
+                    </View>
+                  );
+                });
+              })()
+            : is101
             ? columns.slice(0, visibleCount).map((col, idx) => {
                 const entries = col.bottom.filter((e) => e.round === rs.round);
                 if (entries.length === 0) return null;
@@ -253,10 +419,17 @@ export const ResultScreen: React.FC = () => {
                 );
               })
             : rs.players.slice(0, visibleCount).map((p) => {
+                const col = columns[p.column];
+                const entriesInRound = col.bottom.filter(
+                  (e) => e.round === rs.round
+                );
+                const topsInRound = col.top.filter(
+                  (t) => t.round === rs.round
+                );
                 const hasData =
                   p.isWinner ||
-                  p.topValues.length > 0 ||
-                  p.bottomValues.length > 0;
+                  topsInRound.length > 0 ||
+                  entriesInRound.length > 0;
                 if (!hasData) return null;
                 return (
                   <View key={p.column} style={styles.playerRow}>
@@ -276,13 +449,7 @@ export const ResultScreen: React.FC = () => {
                         p.isWinner && styles.playerValueWinner,
                       ]}
                     >
-                      {p.isWinner
-                        ? p.topValues.length > 0
-                          ? `bitti · üst ${p.topValues.join(',')}`
-                          : 'bitti'
-                        : p.bottomValues.length > 0
-                        ? p.bottomValues.join(', ')
-                        : '–'}
+                      {renderBottomForRound(col, rs.round)}
                     </Text>
                   </View>
                 );
@@ -296,8 +463,11 @@ export const ResultScreen: React.FC = () => {
       specialKafaVurma,
       visibleCount,
       is101,
+      isKlasik,
+      noTop,
       columns,
       playerNames,
+      renderBottomForRound,
     ]
   );
 
@@ -312,15 +482,17 @@ export const ResultScreen: React.FC = () => {
               <Text
                 style={[
                   styles.cardNet,
-                  r.net < 0 && styles.negative,
-                  r.net > 0 && styles.positive,
+                  isKlasik
+                    ? r.net <= 0 && styles.negative
+                    : r.net < 0 && styles.negative,
+                  !isKlasik && r.net > 0 && styles.positive,
                 ]}
               >
                 {r.net}
               </Text>
             </View>
 
-            {!is101 && (
+            {!noTop && (
               <>
                 <View style={styles.row}>
                   <Text style={styles.rowLabel}>Üst</Text>
@@ -328,9 +500,7 @@ export const ResultScreen: React.FC = () => {
                 </View>
                 <View style={styles.row}>
                   <Text style={styles.rowLabel}>Alt</Text>
-                  <Text style={styles.rowValue}>
-                    {formatBottomList(col.bottom)}
-                  </Text>
+                  <Text style={styles.rowValue}>{renderAlt(col)}</Text>
                 </View>
 
                 <View style={styles.divider} />
@@ -341,14 +511,23 @@ export const ResultScreen: React.FC = () => {
                 </View>
                 <View style={styles.row}>
                   <Text style={styles.rowLabel}>Alt toplam</Text>
-                  <Text style={styles.rowValue}>{r.bottomSum}</Text>
+                  <Text style={styles.rowValue}>{bottomTotal(col)}</Text>
                 </View>
               </>
             )}
           </View>
         );
       }),
-    [columns, result, playerNames, visibleCount, is101]
+    [
+      columns,
+      result,
+      playerNames,
+      visibleCount,
+      noTop,
+      isKlasik,
+      renderAlt,
+      bottomTotal,
+    ]
   );
 
   return (
@@ -427,8 +606,8 @@ export const ResultScreen: React.FC = () => {
 
       <LoserCelebrationModal
         visible={loserModalVisible}
-        loserName={playerNames[loserIdx] ?? `Oyuncu ${loserIdx + 1}`}
-        loserNet={result.columns[loserIdx]?.net ?? 0}
+        losers={loserEntries}
+        showScore={!isKlasik}
         onDismiss={dismissLoserModal}
       />
     </SafeAreaView>
@@ -628,6 +807,10 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
   rowValue: {
     ...typography.number,
     color: c.textPrimary,
+  },
+  penaltyValue: {
+    color: c.negative,
+    fontWeight: '900',
   },
   divider: {
     height: 1,

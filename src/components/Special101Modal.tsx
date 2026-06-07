@@ -14,6 +14,10 @@ interface Props {
   visible: boolean;
   initialOkeyle?: boolean;
   initialKafaVurma?: boolean;
+  okeyleLabel?: string;
+  kafaVurmaLabel?: string;
+  winBase?: number;
+  winSuffix?: string;
   onConfirm: (okeyle: boolean, kafaVurma: boolean) => void;
   onCancel: () => void;
 }
@@ -22,6 +26,10 @@ export const Special101Modal: React.FC<Props> = ({
   visible,
   initialOkeyle = false,
   initialKafaVurma = false,
+  okeyleLabel = 'Okeyle / Çiftle',
+  kafaVurmaLabel = 'Açarak (kafa vurma)',
+  winBase = -101,
+  winSuffix = '',
   onConfirm,
   onCancel,
 }) => {
@@ -52,7 +60,7 @@ export const Special101Modal: React.FC<Props> = ({
   };
 
   const mult = (okeyle ? 2 : 1) * (kafa ? 2 : 1);
-  const winValue = -101 * mult;
+  const winValue = winBase * mult;
 
   return (
     <Modal
@@ -81,7 +89,7 @@ export const Special101Modal: React.FC<Props> = ({
               <View style={[styles.radio, okeyle && styles.radioOkeyleActive]}>
                 {okeyle && <View style={styles.radioInnerOkeyle} />}
               </View>
-              <Text style={styles.optionTitle}>Okeyle / Çiftle</Text>
+              <Text style={styles.optionTitle}>{okeyleLabel}</Text>
               <Text style={styles.optionSub}>×2</Text>
             </Pressable>
 
@@ -97,7 +105,7 @@ export const Special101Modal: React.FC<Props> = ({
               <View style={[styles.radio, kafa && styles.radioKafaActive]}>
                 {kafa && <View style={styles.radioInnerKafa} />}
               </View>
-              <Text style={styles.optionTitle}>Açarak (kafa vurma)</Text>
+              <Text style={styles.optionTitle}>{kafaVurmaLabel}</Text>
               <Text style={styles.optionSub}>×2</Text>
             </Pressable>
           </View>
@@ -106,7 +114,8 @@ export const Special101Modal: React.FC<Props> = ({
             <Text style={styles.previewLabel}>Toplam Çarpan</Text>
             <Text style={styles.previewMult}>×{mult}</Text>
             <Text style={styles.previewWin}>
-              Biten: <Text style={styles.previewWinValue}>{winValue}</Text>
+              {winSuffix || 'Biten:'}{' '}
+              <Text style={styles.previewWinValue}>{winValue}</Text>
             </Text>
           </View>
 

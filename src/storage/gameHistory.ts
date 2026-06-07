@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   BottomEntry,
+  BottomMarker,
   Column,
   SavedGame,
   TopEntry,
@@ -17,8 +18,10 @@ type LegacyBottom =
       multiplier?: number;
       locked?: boolean;
       round?: number;
-      marker?: 'finished';
+      marker?: BottomMarker;
     };
+
+const VALID_MARKERS: BottomMarker[] = ['finished', 'penalty', 'not-opened'];
 
 type LegacyColumn = { top: LegacyTop[]; bottom: LegacyBottom[] };
 type LegacyGame = Omit<SavedGame, 'columns' | 'mode'> & {
@@ -38,7 +41,11 @@ const migrateTop = (entry: LegacyTop): TopEntry => {
 const migrateBottom = (entry: LegacyBottom): BottomEntry => {
   if (typeof entry === 'number') return { value: entry, round: 1 };
   const base: BottomEntry = { value: entry.value, round: entry.round ?? 1 };
-  if (entry.marker === 'finished') base.marker = 'finished';
+  // Preserve every known marker (finished / penalty / not-opened); older code
+  // only kept 'finished', which silently dropped penalty amounts in history.
+  if (entry.marker && VALID_MARKERS.includes(entry.marker)) {
+    base.marker = entry.marker;
+  }
   return base;
 };
 

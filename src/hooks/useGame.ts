@@ -3,6 +3,7 @@ import {
   Column,
   ColumnId,
   COLUMN_COUNT,
+  DEFAULT_START_VALUE,
   DEFAULT_TARGET_ROUNDS,
   GameMode,
   MAX_PLAYERS_BY_MODE,
@@ -12,6 +13,7 @@ import {
 import {
   calculateGame,
   columnHasColorTopInRound,
+  computeKlasikOkeyDeductions,
   createEmptyColumns,
   hasEntriesInRound,
   makeBottomEntry,
@@ -104,6 +106,9 @@ export const useGame = () => {
     Record<number, boolean>
   >({});
   const [gameEndPrompted, setGameEndPrompted] = useState(false);
+  const [startValue, setStartValueState] = useState<number>(
+    DEFAULT_START_VALUE
+  );
 
   useEffect(() => {
     loadMode().then(setModeState);
@@ -135,7 +140,8 @@ export const useGame = () => {
         viewingRound,
         roundMultipliers,
         specialFinishes,
-        specialKafaVurma
+        specialKafaVurma,
+        startValue
       ),
     [
       columns,
@@ -145,7 +151,16 @@ export const useGame = () => {
       roundMultipliers,
       specialFinishes,
       specialKafaVurma,
+      startValue,
     ]
+  );
+
+  const klasikOkeyDeductions = useMemo(
+    () =>
+      mode === 'klasik-okey'
+        ? computeKlasikOkeyDeductions(columns, specialFinishes, specialKafaVurma)
+        : {},
+    [mode, columns, specialFinishes, specialKafaVurma]
   );
 
   const updateWinnerHint = useCallback(
@@ -200,7 +215,7 @@ export const useGame = () => {
 
   const removeLast = useCallback(() => {
     const colIdx = selection.column;
-    const is101Mode = mode === 'duz-101';
+    const isCountdownMode = mode === 'duz-101' || mode === 'klasik-okey';
     setColumns((prev) => {
       const next = prev.map((col, idx) => {
         if (idx !== colIdx) return col;
@@ -217,13 +232,13 @@ export const useGame = () => {
               );
           return { ...col, top: newTop, bottom: newBottom };
         }
-        const skipMarkers = is101Mode ? [] : ['finished'];
+        const skipMarkers = isCountdownMode ? [] : ['finished'];
         return {
           ...col,
           bottom: removeLastInRound(col.bottom, viewingRound, skipMarkers),
         };
       });
-      if (is101Mode) {
+      if (isCountdownMode) {
         const anyFinished = next.some((c) =>
           c.bottom.some(
             (e) => e.round === viewingRound && e.marker === 'finished'
@@ -395,6 +410,10 @@ export const useGame = () => {
     setGameEndPrompted(false);
   }, []);
 
+  const setStartValue = useCallback((n: number) => {
+    setStartValueState(Math.max(1, Math.floor(n)));
+  }, []);
+
   const select = useCallback((column: ColumnId, side: Side) => {
     setSelection({ column, side });
     setSelectionActive(true);
@@ -563,15 +582,24 @@ export const useGame = () => {
   const currentRoundIsSpecial = specialFinishes[viewingRound] ?? false;
 
   const isCurrentRoundComplete = useMemo(
-    () =>
-      visibleColumnIds.every((idx) => {
+    () => {
+      if (mode === 'klasik-okey') {
+        // A round is complete once exactly one player is marked as the winner.
+        return visibleColumnIds.some((idx) =>
+          columns[idx].bottom.some(
+            (e) => e.round === viewingRound && e.marker === 'finished'
+          )
+        );
+      }
+      return visibleColumnIds.every((idx) => {
         const c = columns[idx];
         return (
           c.top.some((t) => t.round === viewingRound) ||
           c.bottom.some((e) => e.round === viewingRound)
         );
-      }),
-    [columns, viewingRound, visibleColumnIds]
+      });
+    },
+    [columns, viewingRound, visibleColumnIds, mode]
   );
 
   const colorTopColumns = useMemo(
@@ -637,7 +665,8 @@ export const useGame = () => {
       names?: string[],
       gameMode?: GameMode,
       newPlayMode?: PlayMode,
-      newTargetRounds?: number
+      newTargetRounds?: number,
+      newStartValue?: number
     ) => {
       setColumns(createEmptyColumns(COLUMN_COUNT));
       setSelection(initialSelection);
@@ -653,6 +682,9 @@ export const useGame = () => {
       setGameEndPrompted(false);
       if (typeof newTargetRounds === 'number') {
         setTargetRoundsState(Math.max(1, Math.floor(newTargetRounds)));
+      }
+      if (typeof newStartValue === 'number') {
+        setStartValueState(Math.max(1, Math.floor(newStartValue)));
       }
       if (newPlayMode) {
         setPlayModeState(newPlayMode);
@@ -683,7 +715,7 @@ export const useGame = () => {
   const currentCellHasInRound = useMemo(
     () => {
       const excludeMarkers: ('finished' | 'penalty' | 'not-opened')[] =
-        mode === 'duz-101' ? [] : ['finished'];
+        mode === 'duz-101' || mode === 'klasik-okey' ? [] : ['finished'];
       return hasEntriesInRound(
         columns[selection.column],
         viewingRound,
@@ -777,6 +809,10 @@ export const useGame = () => {
     specialKafaVurma,
     gameEndPrompted,
     acknowledgeGameEnd: useCallback(() => setGameEndPrompted(true), []),
+    startValue,
+    setStartValue,
+    klasikOkeyDeductions,
+    finishKlasik: finish101,
   };
 };
 

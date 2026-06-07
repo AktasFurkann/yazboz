@@ -32,6 +32,7 @@ interface Props {
   is101Okeyle?: boolean;
   is101KafaVurma?: boolean;
   is101OtherWinner?: boolean;
+  isKlasikOkeyMode?: boolean;
 }
 
 const COLOR_OPTIONS = [3, 4, 5, 6];
@@ -78,6 +79,7 @@ const NumberPadComponent: React.FC<Props> = ({
   is101Okeyle = false,
   is101KafaVurma = false,
   is101OtherWinner = false,
+  isKlasikOkeyMode = false,
 }) => {
   const styles = useThemedStyles(makeStyles);
   const [collapsed, setCollapsed] = useState(false);
@@ -185,6 +187,113 @@ const NumberPadComponent: React.FC<Props> = ({
       >
         <Text style={styles.collapsedText}>▲  KLAVYEYİ AÇ</Text>
       </Pressable>
+    );
+  }
+
+  if (isKlasikOkeyMode) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.colorHeader}>
+          <Text style={styles.colorTitle}>
+            {is101Winner ? 'Kazanan seçildi' : 'Bu eli kim kazandı?'}
+          </Text>
+          <Pressable
+            onPress={toggleCollapsed}
+            style={({ pressed }) => [
+              styles.collapseToggle,
+              pressed && styles.pressed,
+            ]}
+            hitSlop={8}
+          >
+            <Text style={styles.collapseToggleText}>▼</Text>
+          </Pressable>
+        </View>
+        <View style={styles.actionRow101}>
+          <Pressable
+            onPress={handleNormalFinish}
+            disabled={is101OtherWinner}
+            style={({ pressed }) => [
+              styles.action101Btn,
+              styles.action101BtnFinish,
+              is101Winner && !is101SpecialActive && styles.action101BtnFinishActive,
+              is101OtherWinner && styles.action101BtnDisabled,
+              pressed && !is101OtherWinner && styles.pressed,
+            ]}
+          >
+            <Text
+              style={[
+                styles.action101Text,
+                styles.action101TextFinish,
+                is101Winner && !is101SpecialActive && styles.action101TextActive,
+                is101OtherWinner && styles.action101TextDisabled,
+              ]}
+            >
+              BİTTİ
+            </Text>
+            <Text
+              style={[
+                styles.action101Hint,
+                styles.action101HintFinish,
+                is101OtherWinner && styles.action101TextDisabled,
+              ]}
+            >
+              diğerleri -1
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={handleOpenSpecial}
+            disabled={is101OtherWinner}
+            style={({ pressed }) => [
+              styles.action101Btn,
+              styles.action101BtnSpecial,
+              is101SpecialActive && styles.action101BtnSpecialActive,
+              is101OtherWinner && styles.action101BtnDisabled,
+              pressed && !is101OtherWinner && styles.pressed,
+            ]}
+          >
+            <Text
+              style={[
+                styles.action101Text,
+                styles.action101TextSpecial,
+                is101SpecialActive && styles.action101TextActive,
+                is101OtherWinner && styles.action101TextDisabled,
+              ]}
+            >
+              ⭐ ÖZEL
+            </Text>
+            <Text
+              style={[
+                styles.action101Hint,
+                styles.action101HintSpecial,
+                is101OtherWinner && styles.action101TextDisabled,
+              ]}
+            >
+              {is101SpecialActive ? `diğerleri -${specialMult}` : 'okeyle / çifte'}
+            </Text>
+          </Pressable>
+        </View>
+        <Pressable
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            onUndoLast();
+          }}
+          disabled={!canUndo}
+          style={({ pressed }) => [
+            styles.klasikSilBtn,
+            !canUndo && styles.klasikSilBtnDisabled,
+            pressed && canUndo && styles.pressed,
+          ]}
+        >
+          <Text
+            style={[
+              styles.klasikSilText,
+              !canUndo && styles.klasikSilTextDisabled,
+            ]}
+          >
+            ✕ Sil
+          </Text>
+        </Pressable>
+      </View>
     );
   }
 
@@ -815,6 +924,27 @@ const makeStyles = (c: ThemeColors) =>
     opacity: 0.35,
   },
   action101TextDisabled: {
+    color: c.textMuted,
+  },
+  klasikSilBtn: {
+    marginTop: spacing.xs,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    backgroundColor: c.negative + '22',
+    borderWidth: 1,
+    borderColor: c.negative,
+    alignItems: 'center',
+  },
+  klasikSilBtnDisabled: {
+    opacity: 0.4,
+  },
+  klasikSilText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: c.negative,
+    letterSpacing: 0.5,
+  },
+  klasikSilTextDisabled: {
     color: c.textMuted,
   },
   action101BtnFinish: {

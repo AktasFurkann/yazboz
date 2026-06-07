@@ -5,17 +5,22 @@ import { radius, spacing, ThemeColors, typography } from '../theme';
 import { useThemedStyles } from '../contexts/ThemeContext';
 import { playSound } from '../utils/sounds';
 
+interface LoserEntry {
+  name: string;
+  net: number;
+}
+
 interface Props {
   visible: boolean;
-  loserName: string;
-  loserNet: number;
+  losers: LoserEntry[];
+  showScore?: boolean;
   onDismiss: () => void;
 }
 
 export const LoserCelebrationModal: React.FC<Props> = ({
   visible,
-  loserName,
-  loserNet,
+  losers,
+  showScore = true,
   onDismiss,
 }) => {
   const styles = useThemedStyles(makeStyles);
@@ -32,6 +37,8 @@ export const LoserCelebrationModal: React.FC<Props> = ({
     onDismiss();
   };
 
+  const multiple = losers.length > 1;
+
   return (
     <Modal
       visible={visible}
@@ -42,19 +49,39 @@ export const LoserCelebrationModal: React.FC<Props> = ({
       <View style={styles.overlay}>
         <View style={styles.card}>
           <View style={styles.ribbon}>
-            <Text style={styles.ribbonText}>KAYBEDEN</Text>
+            <Text style={styles.ribbonText}>
+              {multiple ? 'KAYBEDENLER' : 'KAYBEDEN'}
+            </Text>
           </View>
 
           <Text style={styles.icon}>😅</Text>
 
-          <Text style={styles.loserName} numberOfLines={2}>
-            {loserName}
-          </Text>
-
-          <View style={styles.scoreBox}>
-            <Text style={styles.scoreLabel}>Toplam Skor</Text>
-            <Text style={styles.scoreValue}>{loserNet}</Text>
-          </View>
+          {multiple ? (
+            <View style={styles.multiList}>
+              {losers.map((l, idx) => (
+                <View key={idx} style={styles.multiRow}>
+                  <Text style={styles.multiName} numberOfLines={1}>
+                    {l.name}
+                  </Text>
+                  {showScore && (
+                    <Text style={styles.multiScore}>{l.net}</Text>
+                  )}
+                </View>
+              ))}
+            </View>
+          ) : (
+            <>
+              <Text style={styles.loserName} numberOfLines={2}>
+                {losers[0]?.name ?? '—'}
+              </Text>
+              {showScore && (
+                <View style={styles.scoreBox}>
+                  <Text style={styles.scoreLabel}>Toplam Skor</Text>
+                  <Text style={styles.scoreValue}>{losers[0]?.net ?? 0}</Text>
+                </View>
+              )}
+            </>
+          )}
 
           <Pressable
             onPress={handleDismiss}
@@ -139,6 +166,35 @@ const makeStyles = (c: ThemeColors) =>
     },
     scoreValue: {
       fontSize: 32,
+      fontWeight: '900',
+      color: RED,
+      fontVariant: ['tabular-nums'],
+    },
+    multiList: {
+      width: '100%',
+      marginBottom: spacing.lg,
+      gap: spacing.sm,
+    },
+    multiRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: c.surface,
+      borderRadius: radius.md,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.md,
+      borderWidth: 1,
+      borderColor: RED + '66',
+    },
+    multiName: {
+      fontSize: 20,
+      fontWeight: '900',
+      color: c.textPrimary,
+      flex: 1,
+      paddingRight: spacing.md,
+    },
+    multiScore: {
+      fontSize: 22,
       fontWeight: '900',
       color: RED,
       fontVariant: ['tabular-nums'],

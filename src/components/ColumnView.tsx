@@ -26,6 +26,7 @@ interface Props {
   baseColorsByRound?: Record<number, number>;
   specialFinishes?: Record<number, boolean>;
   specialKafaVurma?: Record<number, boolean>;
+  klasikDeductions?: Record<number, number>;
   readOnly?: boolean;
   mode?: GameMode;
   cellTopHeight?: number;
@@ -77,7 +78,8 @@ const renderBottomByRound = (
   styles: ReturnType<typeof makeStyles>,
   mode?: GameMode,
   specialFinishes?: Record<number, boolean>,
-  specialKafaVurma?: Record<number, boolean>
+  specialKafaVurma?: Record<number, boolean>,
+  klasikDeductions?: Record<number, number>
 ) => {
   const metrics = computeSlotMetrics(maxRound);
   // Use the slot height as the line-height so every slot has identical
@@ -94,6 +96,7 @@ const renderBottomByRound = (
   // Render one slot per round (1..maxRound) so all columns line up vertically.
   const slots: React.ReactNode[] = [];
   const is101 = mode === 'duz-101';
+  const isKlasikOkey = mode === 'klasik-okey';
   for (let r = 1; r <= maxRound; r++) {
     const entries = bottom.filter((e) => e.round === r);
     const hasFinished = entries.some((e) => e.marker === 'finished');
@@ -101,7 +104,18 @@ const renderBottomByRound = (
 
     let inner: React.ReactNode = null;
 
-    if (is101) {
+    if (isKlasikOkey) {
+      const deduction = klasikDeductions?.[r];
+      if (hasFinished) {
+        inner = <View style={styles.finishedLine} />;
+      } else if (deduction != null) {
+        inner = (
+          <Text style={[styles.bottomLine, dynamicLineStyle]} numberOfLines={1}>
+            -{deduction}
+          </Text>
+        );
+      }
+    } else if (is101) {
       const penaltyCount = entries.filter((e) => e.marker === 'penalty').length;
       const notOpenedCount = entries.filter((e) => e.marker === 'not-opened').length;
       const normalEntries = entries.filter((e) => !e.marker);
@@ -217,6 +231,7 @@ const ColumnViewComponent: React.FC<Props> = ({
   baseColorsByRound,
   specialFinishes,
   specialKafaVurma,
+  klasikDeductions,
   readOnly = false,
   mode,
   cellTopHeight,
@@ -322,7 +337,7 @@ const ColumnViewComponent: React.FC<Props> = ({
         </Pressable>
       </View>
 
-      {mode !== 'duz-101' && (
+      {mode !== 'duz-101' && mode !== 'klasik-okey' && (
         <>
           <Pressable
             onPress={() => handlePress('top')}
@@ -361,44 +376,81 @@ const ColumnViewComponent: React.FC<Props> = ({
         delayLongPress={250}
         style={[styles.cellBottom, bottomActive && styles.cellActive]}
       >
-        {column.bottom.length === 0 && maxRound <= 1 ? (
-          <View style={styles.bottomList}>
-            <Text style={[styles.bottomItem, styles.empty]}>–</Text>
-          </View>
+        {mode === 'klasik-okey' ? (
+          <>
+            <View style={styles.klasikRemainingBox}>
+              <Text
+                style={[
+                  styles.klasikRemaining,
+                  result.net <= 0 && styles.klasikRemainingLost,
+                ]}
+              >
+                {result.net}
+              </Text>
+            </View>
+            <View style={styles.bottomList}>
+              <ScrollView
+                contentContainerStyle={styles.bottomListContent}
+                showsVerticalScrollIndicator={false}
+                nestedScrollEnabled
+              >
+                {renderBottomByRound(
+                  column.bottom,
+                  maxRound,
+                  multipliersByRound,
+                  baseColorsByRound,
+                  styles,
+                  mode,
+                  specialFinishes,
+                  specialKafaVurma,
+                  klasikDeductions
+                )}
+              </ScrollView>
+            </View>
+          </>
         ) : (
-          <View style={styles.bottomList}>
-            <ScrollView
-              contentContainerStyle={styles.bottomListContent}
-              showsVerticalScrollIndicator={false}
-              nestedScrollEnabled
-            >
-              {renderBottomByRound(
-                column.bottom,
-                maxRound,
-                multipliersByRound,
-                baseColorsByRound,
-                styles,
-                mode,
-                specialFinishes,
-                specialKafaVurma
-              )}
-            </ScrollView>
-          </View>
-        )}
+          <>
+            {column.bottom.length === 0 && maxRound <= 1 ? (
+              <View style={styles.bottomList}>
+                <Text style={[styles.bottomItem, styles.empty]}>–</Text>
+              </View>
+            ) : (
+              <View style={styles.bottomList}>
+                <ScrollView
+                  contentContainerStyle={styles.bottomListContent}
+                  showsVerticalScrollIndicator={false}
+                  nestedScrollEnabled
+                >
+                  {renderBottomByRound(
+                    column.bottom,
+                    maxRound,
+                    multipliersByRound,
+                    baseColorsByRound,
+                    styles,
+                    mode,
+                    specialFinishes,
+                    specialKafaVurma,
+                    klasikDeductions
+                  )}
+                </ScrollView>
+              </View>
+            )}
 
-        {hasAnyNumbers && (
-          <View style={styles.netFooter}>
-            <Text style={styles.netLabel}>NET</Text>
-            <Text
-              style={[
-                styles.netValue,
-                result.net < 0 && styles.netNegative,
-                result.net > 0 && styles.netPositive,
-              ]}
-            >
-              {result.net}
-            </Text>
-          </View>
+            {hasAnyNumbers && (
+              <View style={styles.netFooter}>
+                <Text style={styles.netLabel}>NET</Text>
+                <Text
+                  style={[
+                    styles.netValue,
+                    result.net < 0 && styles.netNegative,
+                    result.net > 0 && styles.netPositive,
+                  ]}
+                >
+                  {result.net}
+                </Text>
+              </View>
+            )}
+          </>
         )}
       </Pressable>
     </Animated.View>
@@ -536,6 +588,23 @@ const makeStyles = (c: ThemeColors) =>
     winValue101: {
       fontWeight: '900',
       color: c.accent,
+    },
+    klasikRemainingBox: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: spacing.xs,
+      borderBottomWidth: 1,
+      borderBottomColor: c.divider,
+      marginBottom: spacing.xs,
+    },
+    klasikRemaining: {
+      fontSize: 34,
+      fontWeight: '900',
+      color: c.textPrimary,
+      fontVariant: ['tabular-nums'],
+    },
+    klasikRemainingLost: {
+      color: c.negative,
     },
     empty: {
       color: c.textMuted,

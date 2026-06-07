@@ -7,6 +7,7 @@ import { useThemedStyles } from '../contexts/ThemeContext';
 interface Props {
   visible: boolean;
   targetRounds: number;
+  message?: string;
   onResult: () => void;
   onContinue: () => void;
 }
@@ -14,6 +15,7 @@ interface Props {
 export const GameEndPromptModal: React.FC<Props> = ({
   visible,
   targetRounds,
+  message,
   onResult,
   onContinue,
 }) => {
@@ -41,7 +43,7 @@ export const GameEndPromptModal: React.FC<Props> = ({
           <Text style={styles.icon}>🏁</Text>
           <Text style={styles.title}>OYUN BİTTİ</Text>
           <Text style={styles.message}>
-            {targetRounds} tur tamamlandı. Devam etmek istiyor musunuz?
+            {message ?? `${targetRounds} tur tamamlandı. Devam etmek istiyor musunuz?`}
           </Text>
 
           <View style={styles.actions}>

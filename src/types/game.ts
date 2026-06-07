@@ -5,7 +5,7 @@ export const COLUMN_IDS: readonly ColumnId[] = [0, 1, 2, 3] as const;
 
 export type Side = 'top' | 'bottom';
 
-export type GameMode = 'klasik' | 'renkli-klasik' | 'duz-101';
+export type GameMode = 'klasik' | 'renkli-klasik' | 'duz-101' | 'klasik-okey';
 
 export type PlayMode = 'singles' | 'pairs';
 
@@ -64,9 +64,11 @@ export interface SavedGame {
   specialKafaVurma?: Record<number, boolean>;
   label?: string;
   targetRounds?: number;
+  startValue?: number;
 }
 
 export const DEFAULT_TARGET_ROUNDS = 11;
+export const DEFAULT_START_VALUE = 10;
 
 export interface ColorInfo {
   multiplier: number;
@@ -85,4 +87,5 @@ export const MODE_LABEL: Record<GameMode, string> = {
   'klasik': 'Klasik',
   'renkli-klasik': 'Renkli',
   'duz-101': '101 Okey (katlamasız)',
+  'klasik-okey': 'Klasik Okey',
 };
