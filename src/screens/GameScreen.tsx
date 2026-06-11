@@ -344,6 +344,67 @@ export const GameScreen: React.FC = () => {
         )
     );
 
+  // Per-round breakdown for the long-press preview overlay. Penalties show
+  // their real cost (floorColor×100), one round per line.
+  const buildPreviewLines = (
+    col: (typeof columns)[number],
+    side: Side
+  ): { round: number; text: string }[] => {
+    if (side === 'top') {
+      const rounds = Array.from(new Set(col.top.map((t) => t.round))).sort(
+        (a, b) => a - b
+      );
+      return rounds.map((r) => ({
+        round: r,
+        text: col.top
+          .filter((t) => t.round === r)
+          .map((t) => t.value)
+          .join(', '),
+      }));
+    }
+    const rounds = Array.from(new Set(col.bottom.map((e) => e.round))).sort(
+      (a, b) => a - b
+    );
+    return rounds.map((r) => {
+      const entries = col.bottom.filter((e) => e.round === r);
+      const parts: string[] = [];
+      if (is101) {
+        const okeyle = specialFinishes[r] ?? false;
+        const kafa = specialKafaVurma[r] ?? false;
+        const m = (okeyle ? 2 : 1) * (kafa ? 2 : 1);
+        const finished = entries.some((e) => e.marker === 'finished');
+        const notOpened = entries.filter((e) => e.marker === 'not-opened').length;
+        const pen = entries.filter((e) => e.marker === 'penalty').length;
+        const normals = entries.filter((e) => !e.marker);
+        if (finished) parts.push(`${-101 * m}`);
+        if (notOpened > 0) parts.push(`+${202 * m * notOpened}`);
+        normals.forEach((e) => parts.push(`+${e.value * m}`));
+        if (pen > 0) parts.push(`+${101 * pen} ceza`);
+      } else if (isKlasik) {
+        const info = klasikOkeyRounds[r];
+        const isWinner = entries.some((e) => e.marker === 'finished');
+        const isGosterge = entries.some((e) => e.marker === 'gosterge');
+        if (isWinner) parts.push('bitti');
+        if (isGosterge) parts.push('G');
+        if (info) {
+          const ded =
+            (info.hasWinner && !isWinner ? info.winnerDed : 0) +
+            (info.hasGosterge && !isGosterge ? 1 : 0);
+          if (ded > 0) parts.push(`-${ded}`);
+        }
+      } else {
+        const baseColor = baseColorsByRound[r] ?? 1;
+        const mult = multipliersByRound[r] ?? 1;
+        const pen = entries.filter((e) => e.marker === 'penalty').length;
+        const normals = entries.filter((e) => !e.marker);
+        if (entries.some((e) => e.marker === 'finished')) parts.push('bitti');
+        if (pen > 0) parts.push(`${baseColor * 100 * pen}`);
+        normals.forEach((e) => parts.push(`${e.value * mult}`));
+      }
+      return { round: r, text: parts.length > 0 ? parts.join(' + ') : '–' };
+    });
+  };
+
   const [special101Open, setSpecial101Open] = useState(false);
   const handleOpenSpecial101 = useCallback(() => setSpecial101Open(true), []);
   const handleCloseSpecial101 = useCallback(() => setSpecial101Open(false), []);
@@ -749,22 +810,21 @@ export const GameScreen: React.FC = () => {
               {playerNames[preview.column]} ·{' '}
               {preview.side === 'top' ? 'ÜST' : 'ALT'}
             </Text>
-            <Text style={styles.previewValues}>
-              {preview.side === 'top'
-                ? columns[preview.column].top.map((t) => t.value).join(', ')
-                : columns[preview.column].bottom
-                    .filter((e) => e.marker !== 'finished')
-                    .map(
-                      (e) => e.value * (multipliersByRound[e.round] ?? 1)
-                    )
-                    .join(', ')}
-            </Text>
-            <Text style={styles.previewCount}>
-              {preview.side === 'top'
-                ? columns[preview.column].top.length
-                : columns[preview.column].bottom.length}{' '}
-              değer
-            </Text>
+            {(() => {
+              const lines = buildPreviewLines(
+                columns[preview.column],
+                preview.side
+              );
+              if (lines.length === 0) {
+                return <Text style={styles.previewLine}>–</Text>;
+              }
+              return lines.map((l) => (
+                <Text key={l.round} style={styles.previewLine}>
+                  <Text style={styles.previewRound}>{l.round}. tur: </Text>
+                  {l.text}
+                </Text>
+              ));
+            })()}
           </View>
         </View>
       )}
@@ -999,17 +1059,17 @@ const makeStyles = (c: ThemeColors) => StyleSheet.create({
     letterSpacing: 1,
     marginBottom: spacing.sm,
   },
-  previewValues: {
-    fontSize: 22,
+  previewLine: {
+    fontSize: 18,
     fontWeight: '700',
     color: c.textPrimary,
-    textAlign: 'center',
+    textAlign: 'left',
     fontVariant: ['tabular-nums'],
-    lineHeight: 30,
+    lineHeight: 26,
+    alignSelf: 'stretch',
   },
-  previewCount: {
-    ...typography.caption,
-    color: c.textMuted,
-    marginTop: spacing.sm,
+  previewRound: {
+    fontWeight: '800',
+    color: c.accent,
   },
 });
