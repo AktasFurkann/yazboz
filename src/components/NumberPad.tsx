@@ -33,6 +33,9 @@ interface Props {
   is101KafaVurma?: boolean;
   is101OtherWinner?: boolean;
   isKlasikOkeyMode?: boolean;
+  onGosterge?: () => void;
+  isGosterge?: boolean;
+  isGostergeOther?: boolean;
 }
 
 const COLOR_OPTIONS = [3, 4, 5, 6];
@@ -80,6 +83,9 @@ const NumberPadComponent: React.FC<Props> = ({
   is101KafaVurma = false,
   is101OtherWinner = false,
   isKlasikOkeyMode = false,
+  onGosterge,
+  isGosterge = false,
+  isGostergeOther = false,
 }) => {
   const styles = useThemedStyles(makeStyles);
   const [collapsed, setCollapsed] = useState(false);
@@ -150,6 +156,12 @@ const NumberPadComponent: React.FC<Props> = ({
   const handleMarkNotOpened = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     onMarkNotOpened?.();
+  };
+
+  const handleGosterge = () => {
+    if (isGostergeOther) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    onGosterge?.();
   };
 
   const is101SpecialActive = is101Winner && (is101Okeyle || is101KafaVurma);
@@ -237,7 +249,7 @@ const NumberPadComponent: React.FC<Props> = ({
                 is101OtherWinner && styles.action101TextDisabled,
               ]}
             >
-              diğerleri -1
+              diğerleri -2
             </Text>
           </Pressable>
           <Pressable
@@ -268,31 +280,63 @@ const NumberPadComponent: React.FC<Props> = ({
                 is101OtherWinner && styles.action101TextDisabled,
               ]}
             >
-              {is101SpecialActive ? `diğerleri -${specialMult}` : 'okeyle / çifte'}
+              {is101SpecialActive
+                ? `diğerleri -${2 * specialMult}`
+                : 'okeyle / çifte'}
             </Text>
           </Pressable>
         </View>
-        <Pressable
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            onUndoLast();
-          }}
-          disabled={!canUndo}
-          style={({ pressed }) => [
-            styles.klasikSilBtn,
-            !canUndo && styles.klasikSilBtnDisabled,
-            pressed && canUndo && styles.pressed,
-          ]}
-        >
-          <Text
-            style={[
-              styles.klasikSilText,
-              !canUndo && styles.klasikSilTextDisabled,
+        <View style={styles.klasikBottomRow}>
+          <Pressable
+            onPress={handleGosterge}
+            disabled={isGostergeOther}
+            style={({ pressed }) => [
+              styles.gostergeBtn,
+              isGosterge && styles.gostergeBtnActive,
+              isGostergeOther && styles.action101BtnDisabled,
+              pressed && !isGostergeOther && styles.pressed,
             ]}
           >
-            ✕ Sil
-          </Text>
-        </Pressable>
+            <Text
+              style={[
+                styles.gostergeText,
+                isGosterge && styles.action101TextActive,
+                isGostergeOther && styles.action101TextDisabled,
+              ]}
+            >
+              🎯 GÖSTERGE
+            </Text>
+            <Text
+              style={[
+                styles.gostergeHint,
+                isGostergeOther && styles.action101TextDisabled,
+              ]}
+            >
+              diğerleri -1
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              onUndoLast();
+            }}
+            disabled={!canUndo}
+            style={({ pressed }) => [
+              styles.klasikSilBtn,
+              !canUndo && styles.klasikSilBtnDisabled,
+              pressed && canUndo && styles.pressed,
+            ]}
+          >
+            <Text
+              style={[
+                styles.klasikSilText,
+                !canUndo && styles.klasikSilTextDisabled,
+              ]}
+            >
+              ✕ Sil
+            </Text>
+          </Pressable>
+        </View>
       </View>
     );
   }
@@ -926,14 +970,46 @@ const makeStyles = (c: ThemeColors) =>
   action101TextDisabled: {
     color: c.textMuted,
   },
-  klasikSilBtn: {
+  klasikBottomRow: {
+    flexDirection: 'row',
+    gap: spacing.xs,
     marginTop: spacing.xs,
+  },
+  gostergeBtn: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    backgroundColor: '#3B82F622',
+    borderWidth: 1.5,
+    borderColor: '#3B82F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  gostergeBtnActive: {
+    backgroundColor: '#3B82F6',
+  },
+  gostergeText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#3B82F6',
+    letterSpacing: 0.5,
+  },
+  gostergeHint: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#3B82F6',
+    opacity: 0.8,
+    marginTop: 2,
+  },
+  klasikSilBtn: {
+    flex: 1,
     paddingVertical: spacing.sm,
     borderRadius: radius.md,
     backgroundColor: c.negative + '22',
     borderWidth: 1,
     borderColor: c.negative,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   klasikSilBtnDisabled: {
     opacity: 0.4,

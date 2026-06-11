@@ -16,7 +16,7 @@ import { ColumnView } from '../components/ColumnView';
 import { BannerSlot } from '../components/BannerSlot';
 import {
   computeBaseColorsByRound,
-  computeKlasikOkeyDeductions,
+  computeKlasikOkeyRounds,
   computeMultipliersByRound,
 } from '../logic/calculator';
 import { radius, spacing, ThemeColors, typography } from '../theme';
@@ -75,10 +75,10 @@ export const InspectScreen: React.FC = () => {
   const colorInfo = COLOR_BY_MULTIPLIER[result.multiplier];
   const showColorBadge = mode === 'renkli-klasik' && colorInfo != null;
 
-  const klasikDeductions = useMemo(
+  const klasikRounds = useMemo(
     () =>
       mode === 'klasik-okey'
-        ? computeKlasikOkeyDeductions(columns, specialFinishes, specialKafaVurma)
+        ? computeKlasikOkeyRounds(columns, specialFinishes, specialKafaVurma)
         : {},
     [mode, columns, specialFinishes, specialKafaVurma]
   );
@@ -149,7 +149,7 @@ export const InspectScreen: React.FC = () => {
             baseColorsByRound={baseColorsByRound}
             specialFinishes={specialFinishes}
             specialKafaVurma={specialKafaVurma}
-            klasikDeductions={klasikDeductions}
+            klasikRounds={klasikRounds}
             maxRound={maxRound}
             readOnly
             mode={mode}

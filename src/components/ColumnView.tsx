@@ -12,6 +12,7 @@ import * as Haptics from 'expo-haptics';
 import { radius, spacing, ThemeColors, typography } from '../theme';
 import { useThemedStyles } from '../contexts/ThemeContext';
 import { Column, ColumnId, ColumnResult, GameMode, Side } from '../types/game';
+import type { KlasikRoundInfo } from '../logic/calculator';
 
 interface Props {
   index: ColumnId;
@@ -26,7 +27,7 @@ interface Props {
   baseColorsByRound?: Record<number, number>;
   specialFinishes?: Record<number, boolean>;
   specialKafaVurma?: Record<number, boolean>;
-  klasikDeductions?: Record<number, number>;
+  klasikRounds?: Record<number, KlasikRoundInfo>;
   readOnly?: boolean;
   mode?: GameMode;
   cellTopHeight?: number;
@@ -57,7 +58,7 @@ const formatTopDisplay = (
 type BottomEntryWithMeta = {
   value: number;
   round: number;
-  marker?: 'finished' | 'penalty' | 'not-opened';
+  marker?: 'finished' | 'penalty' | 'not-opened' | 'gosterge';
 };
 
 const computeSlotMetrics = (
@@ -79,7 +80,7 @@ const renderBottomByRound = (
   mode?: GameMode,
   specialFinishes?: Record<number, boolean>,
   specialKafaVurma?: Record<number, boolean>,
-  klasikDeductions?: Record<number, number>
+  klasikRounds?: Record<number, KlasikRoundInfo>
 ) => {
   const metrics = computeSlotMetrics(maxRound);
   // Use the slot height as the line-height so every slot has identical
@@ -105,15 +106,42 @@ const renderBottomByRound = (
     let inner: React.ReactNode = null;
 
     if (isKlasikOkey) {
-      const deduction = klasikDeductions?.[r];
+      const info = klasikRounds?.[r];
+      const isGostergeHolder = entries.some((e) => e.marker === 'gosterge');
       if (hasFinished) {
-        inner = <View style={styles.finishedLine} />;
-      } else if (deduction != null) {
-        inner = (
-          <Text style={[styles.bottomLine, dynamicLineStyle]} numberOfLines={1}>
-            -{deduction}
-          </Text>
+        inner = isGostergeHolder ? (
+          <View style={styles.finishRow}>
+            <View style={styles.finishedLineRow} />
+            <Text style={styles.gostergeTagInline}>g</Text>
+          </View>
+        ) : (
+          <View style={styles.finishedLine} />
         );
+      } else if (info) {
+        const winnerPart = info.hasWinner ? info.winnerDed : 0;
+        const gostergePart =
+          info.hasGosterge && !isGostergeHolder ? 1 : 0;
+        const thisDed = winnerPart + gostergePart;
+        if (isGostergeHolder) {
+          inner = (
+            <Text
+              style={[styles.bottomLine, dynamicLineStyle]}
+              numberOfLines={1}
+            >
+              <Text style={styles.gostergeTag}>G</Text>
+              {thisDed > 0 ? ` -${thisDed}` : ''}
+            </Text>
+          );
+        } else if (thisDed > 0) {
+          inner = (
+            <Text
+              style={[styles.bottomLine, dynamicLineStyle]}
+              numberOfLines={1}
+            >
+              -{thisDed}
+            </Text>
+          );
+        }
       }
     } else if (is101) {
       const penaltyCount = entries.filter((e) => e.marker === 'penalty').length;
@@ -165,7 +193,12 @@ const renderBottomByRound = (
           partCount >= 2 ? dynamicLineCompactStyle : dynamicLineStyle,
         ];
         inner = (
-          <Text style={lineStyle} numberOfLines={1}>
+          <Text
+            style={lineStyle}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.4}
+          >
             {parts}
           </Text>
         );
@@ -203,7 +236,12 @@ const renderBottomByRound = (
       ];
 
       inner = (
-        <Text style={lineStyle} numberOfLines={1}>
+        <Text
+          style={lineStyle}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.4}
+        >
           {parts}
         </Text>
       );
@@ -231,7 +269,7 @@ const ColumnViewComponent: React.FC<Props> = ({
   baseColorsByRound,
   specialFinishes,
   specialKafaVurma,
-  klasikDeductions,
+  klasikRounds,
   readOnly = false,
   mode,
   cellTopHeight,
@@ -403,7 +441,7 @@ const ColumnViewComponent: React.FC<Props> = ({
                   mode,
                   specialFinishes,
                   specialKafaVurma,
-                  klasikDeductions
+                  klasikRounds
                 )}
               </ScrollView>
             </View>
@@ -430,7 +468,7 @@ const ColumnViewComponent: React.FC<Props> = ({
                     mode,
                     specialFinishes,
                     specialKafaVurma,
-                    klasikDeductions
+                    klasikRounds
                   )}
                 </ScrollView>
               </View>
@@ -588,6 +626,28 @@ const makeStyles = (c: ThemeColors) =>
     winValue101: {
       fontWeight: '900',
       color: c.accent,
+    },
+    gostergeTag: {
+      fontWeight: '900',
+      color: '#3B82F6',
+    },
+    finishRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      width: '100%',
+    },
+    finishedLineRow: {
+      width: '60%',
+      height: 3,
+      backgroundColor: c.accent,
+      borderRadius: 2,
+      marginRight: 4,
+    },
+    gostergeTagInline: {
+      fontSize: 13,
+      fontWeight: '900',
+      color: '#3B82F6',
     },
     klasikRemainingBox: {
       alignItems: 'center',

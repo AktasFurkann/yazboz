@@ -82,8 +82,9 @@ export const GameScreen: React.FC = () => {
     specialKafaVurma,
     gameEndPrompted,
     acknowledgeGameEnd,
-    klasikOkeyDeductions,
+    klasikOkeyRounds,
     finishKlasik,
+    markGosterge,
     dealerColumn,
   } = useGameContext();
   const is101 = mode === 'duz-101';
@@ -326,6 +327,22 @@ export const GameScreen: React.FC = () => {
     result.columns
       .slice(0, visibleColumnCount)
       .some((c) => c.net <= 0);
+
+  const isKlasikGosterge =
+    isKlasik &&
+    current101Column.bottom.some(
+      (e) => e.round === viewingRound && e.marker === 'gosterge'
+    );
+  const isKlasikGostergeOther =
+    isKlasik &&
+    !isKlasikGosterge &&
+    columns.some(
+      (col, idx) =>
+        idx !== selection.column &&
+        col.bottom.some(
+          (e) => e.round === viewingRound && e.marker === 'gosterge'
+        )
+    );
 
   const [special101Open, setSpecial101Open] = useState(false);
   const handleOpenSpecial101 = useCallback(() => setSpecial101Open(true), []);
@@ -589,7 +606,7 @@ export const GameScreen: React.FC = () => {
             baseColorsByRound={baseColorsByRound}
             specialFinishes={specialFinishes}
             specialKafaVurma={specialKafaVurma}
-            klasikDeductions={klasikOkeyDeductions}
+            klasikRounds={klasikOkeyRounds}
             maxRound={maxRound}
             mode={mode}
             cellTopHeight={cellTopHeight}
@@ -640,6 +657,9 @@ export const GameScreen: React.FC = () => {
           is101Okeyle={is101Okeyle}
           is101KafaVurma={is101KafaVurma}
           is101OtherWinner={is101OtherWinner}
+          onGosterge={markGosterge}
+          isGosterge={isKlasikGosterge}
+          isGostergeOther={isKlasikGostergeOther}
         />
       ) : (
         <View style={styles.selectHintBar}>
@@ -687,7 +707,7 @@ export const GameScreen: React.FC = () => {
         initialKafaVurma={is101KafaVurma}
         okeyleLabel={isKlasik ? 'Okeyle' : 'Okeyle / Çiftle'}
         kafaVurmaLabel={isKlasik ? 'Çifte' : 'Açarak (kafa vurma)'}
-        winBase={isKlasik ? -1 : -101}
+        winBase={isKlasik ? -2 : -101}
         winSuffix={isKlasik ? 'Diğerleri:' : 'Biten:'}
         onConfirm={handleConfirmSpecial101}
         onCancel={handleCloseSpecial101}

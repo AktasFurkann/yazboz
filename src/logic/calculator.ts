@@ -94,37 +94,59 @@ const calculateColumn = (
   return { topSum, bottomSum, net };
 };
 
-export const computeKlasikOkeyDeductions = (
+export const GOSTERGE_DEDUCTION = 1;
+
+export interface KlasikRoundInfo {
+  // Deduction applied to every NON-winner (2 / 4 / 8 by okeyle/çifte).
+  winnerDed: number;
+  hasWinner: boolean;
+  hasGosterge: boolean;
+}
+
+export const computeKlasikOkeyRounds = (
   columns: Column[],
   specialFinishes: Record<number, boolean> = {},
   specialKafaVurma: Record<number, boolean> = {}
-): Record<number, number> => {
-  const result: Record<number, number> = {};
+): Record<number, KlasikRoundInfo> => {
+  const result: Record<number, KlasikRoundInfo> = {};
   const rounds = collectRounds(columns);
   for (const r of rounds) {
     const hasWinner = columns.some((c) =>
       c.bottom.some((e) => e.round === r && e.marker === 'finished')
     );
-    if (!hasWinner) continue;
+    const hasGosterge = columns.some((c) =>
+      c.bottom.some((e) => e.round === r && e.marker === 'gosterge')
+    );
+    if (!hasWinner && !hasGosterge) continue;
     const okeyle = specialFinishes[r] ?? false;
     const kafa = specialKafaVurma[r] ?? false;
-    result[r] = 1 * (okeyle ? 2 : 1) * (kafa ? 2 : 1);
+    // Base deduction is 2: normal -2, okeyle -4, çifte -4, okeyle+çifte -8.
+    result[r] = {
+      winnerDed: 2 * (okeyle ? 2 : 1) * (kafa ? 2 : 1),
+      hasWinner,
+      hasGosterge,
+    };
   }
   return result;
 };
 
 const calculateKlasikOkeyColumn = (
   column: Column,
-  deductions: Record<number, number>,
+  rounds: Record<number, KlasikRoundInfo>,
   startValue: number
 ): ColumnResult => {
   let total = 0;
-  for (const key of Object.keys(deductions)) {
+  for (const key of Object.keys(rounds)) {
     const r = Number(key);
+    const info = rounds[r];
     const isWinner = column.bottom.some(
       (e) => e.round === r && e.marker === 'finished'
     );
-    if (!isWinner) total += deductions[r];
+    const isGosterge = column.bottom.some(
+      (e) => e.round === r && e.marker === 'gosterge'
+    );
+    if (info.hasWinner && !isWinner) total += info.winnerDed;
+    if (info.hasGosterge && !isGosterge) total += GOSTERGE_DEDUCTION;
   }
   return { topSum: 0, bottomSum: 0, net: startValue - total };
 };
@@ -165,13 +187,13 @@ export const calculateGame = (
   startValue: number = 10
 ): GameResult => {
   if (mode === 'klasik-okey') {
-    const deductions = computeKlasikOkeyDeductions(
+    const klasikRounds = computeKlasikOkeyRounds(
       columns,
       specialFinishes,
       specialKafaVurma
     );
     const results = columns.map((col) =>
-      calculateKlasikOkeyColumn(col, deductions, startValue)
+      calculateKlasikOkeyColumn(col, klasikRounds, startValue)
     );
     const grandTotal = results.reduce((acc, r) => acc + r.net, 0);
     const okeyle = specialFinishes[viewingRound] ?? false;

@@ -24,7 +24,7 @@ export interface TopEntry {
   round: number;
 }
 
-export type BottomMarker = 'finished' | 'penalty' | 'not-opened';
+export type BottomMarker = 'finished' | 'penalty' | 'not-opened' | 'gosterge';
 
 export interface BottomEntry {
   value: number;

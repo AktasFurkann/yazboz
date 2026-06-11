@@ -342,18 +342,33 @@ export const ResultScreen: React.FC = () => {
 
           {isKlasik
             ? (() => {
-                const hasWinner = columns
-                  .slice(0, visibleCount)
-                  .some((col) =>
-                    col.bottom.some(
-                      (e) => e.round === rs.round && e.marker === 'finished'
-                    )
-                  );
-                if (!hasWinner) return null;
-                return columns.slice(0, visibleCount).map((col, idx) => {
+                const cols = columns.slice(0, visibleCount);
+                const hasWinner = cols.some((col) =>
+                  col.bottom.some(
+                    (e) => e.round === rs.round && e.marker === 'finished'
+                  )
+                );
+                const hasGosterge = cols.some((col) =>
+                  col.bottom.some(
+                    (e) => e.round === rs.round && e.marker === 'gosterge'
+                  )
+                );
+                if (!hasWinner && !hasGosterge) return null;
+                const winnerDed = 2 * mult101;
+                return cols.map((col, idx) => {
                   const winner = col.bottom.some(
                     (e) => e.round === rs.round && e.marker === 'finished'
                   );
+                  const gosterge = col.bottom.some(
+                    (e) => e.round === rs.round && e.marker === 'gosterge'
+                  );
+                  const ded =
+                    (hasWinner && !winner ? winnerDed : 0) +
+                    (hasGosterge && !gosterge ? 1 : 0);
+                  let label: string;
+                  if (winner) label = 'BİTTİ';
+                  else if (gosterge) label = ded > 0 ? `G · -${ded}` : 'G';
+                  else label = `-${ded}`;
                   return (
                     <View key={idx} style={styles.playerRow}>
                       <Text
@@ -371,7 +386,7 @@ export const ResultScreen: React.FC = () => {
                           winner && styles.playerValueWinner,
                         ]}
                       >
-                        {winner ? 'BİTTİ' : `-${mult101}`}
+                        {label}
                       </Text>
                     </View>
                   );

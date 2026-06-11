@@ -43,7 +43,7 @@ const CATEGORIES: Category[] = [
   {
     id: 'klasik-okey',
     title: 'Klasik Okey',
-    subtitle: 'Sayıdan düşmeli · Normal -1 · Okeyle -2 · Okeyle+Çifte -4',
+    subtitle: 'Sayıdan düşmeli · Normal -2 · Okeyle -4 · Okeyle+Çifte -8',
     mode: 'klasik-okey',
     enabled: true,
     accent: '#3B82F6',
@@ -67,7 +67,7 @@ const CATEGORIES: Category[] = [
 
 export const MenuScreen: React.FC = () => {
   const navigation = useNavigation<Nav>();
-  const { startNewGame } = useGameContext();
+  const { startNewGame, hasActiveGame } = useGameContext();
   const styles = useThemedStyles(makeStyles);
   const { isDark, toggleTheme } = useTheme();
   const [pendingCategory, setPendingCategory] = useState<Category | null>(null);
@@ -154,6 +154,26 @@ export const MenuScreen: React.FC = () => {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
+        {hasActiveGame && (
+          <Pressable
+            onPress={() => navigation.navigate('Game')}
+            style={({ pressed }) => [
+              styles.resumeBtn,
+              pressed && styles.cardPressed,
+            ]}
+          >
+            <View style={styles.cardRow}>
+              <View style={styles.cardLeft}>
+                <Text style={styles.resumeTitle}>▶ Yarım Kalan Oyuna Devam Et</Text>
+                <Text style={styles.resumeSub}>
+                  Kaldığın oyun otomatik kaydedildi
+                </Text>
+              </View>
+              <Text style={styles.resumeArrow}>›</Text>
+            </View>
+          </Pressable>
+        )}
+
         {CATEGORIES.map((cat) => (
           <Pressable
             key={cat.id}
@@ -298,6 +318,29 @@ const makeStyles = (c: ThemeColors) =>
     content: {
       paddingHorizontal: spacing.lg,
       paddingBottom: spacing.xxl,
+    },
+    resumeBtn: {
+      backgroundColor: c.accentMuted,
+      borderRadius: radius.lg,
+      padding: spacing.lg,
+      marginBottom: spacing.md,
+      borderWidth: 2,
+      borderColor: c.accent,
+    },
+    resumeTitle: {
+      ...typography.heading,
+      color: c.accent,
+      fontWeight: '800',
+    },
+    resumeSub: {
+      ...typography.caption,
+      color: c.textMuted,
+      marginTop: 4,
+    },
+    resumeArrow: {
+      fontSize: 32,
+      fontWeight: '700',
+      color: c.accent,
     },
     card: {
       backgroundColor: c.surface,

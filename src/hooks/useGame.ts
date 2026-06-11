@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   Column,
   ColumnId,
@@ -13,7 +14,7 @@ import {
 import {
   calculateGame,
   columnHasColorTopInRound,
-  computeKlasikOkeyDeductions,
+  computeKlasikOkeyRounds,
   createEmptyColumns,
   hasEntriesInRound,
   makeBottomEntry,
@@ -28,6 +29,8 @@ export interface GameSelection {
 }
 
 const initialSelection: GameSelection = { column: 0, side: 'top' };
+
+const ACTIVE_GAME_KEY = '@yazboz/active-game/v1';
 
 const isLast = (s: GameSelection): boolean =>
   s.column === COLUMN_COUNT - 1 && s.side === 'bottom';
@@ -109,10 +112,56 @@ export const useGame = () => {
   const [startValue, setStartValueState] = useState<number>(
     DEFAULT_START_VALUE
   );
+  const [hydrated, setHydrated] = useState(false);
+  const restoredNonEmptyRef = useRef(false);
 
+  // On launch: restore an in-progress game if one was saved (survives the app
+  // being force-closed). Falls back to last-used mode/playMode settings.
   useEffect(() => {
-    loadMode().then(setModeState);
-    loadPlayMode().then(setPlayModeState);
+    let cancelled = false;
+    (async () => {
+      try {
+        const raw = await AsyncStorage.getItem(ACTIVE_GAME_KEY);
+        if (raw && !cancelled) {
+          const s = JSON.parse(raw);
+          const cols: Column[] | undefined = s.columns;
+          const nonEmpty =
+            Array.isArray(cols) &&
+            cols.some(
+              (c) =>
+                (c.top?.length ?? 0) > 0 || (c.bottom?.length ?? 0) > 0
+            );
+          if (nonEmpty) {
+            setColumns(cols as Column[]);
+            if (s.mode) setModeState(s.mode);
+            if (s.playMode) setPlayModeState(s.playMode);
+            if (Array.isArray(s.playerNames)) setPlayerNames(s.playerNames);
+            setMaxRound(s.maxRound ?? 1);
+            setViewingRound(s.viewingRound ?? 1);
+            setRoundMultipliers(s.roundMultipliers ?? {});
+            setSpecialFinishes(s.specialFinishes ?? {});
+            setSpecialKafaVurma(s.specialKafaVurma ?? {});
+            setTargetRoundsState(s.targetRounds ?? DEFAULT_TARGET_ROUNDS);
+            setStartValueState(s.startValue ?? DEFAULT_START_VALUE);
+            setLastRoundAlertShown(s.lastRoundAlertShown ?? false);
+            setGameEndPrompted(s.gameEndPrompted ?? false);
+            restoredNonEmptyRef.current = true;
+          }
+        }
+      } catch {
+        // ignore restore errors
+      }
+      if (!cancelled) {
+        if (!restoredNonEmptyRef.current) {
+          loadMode().then(setModeState);
+          loadPlayMode().then(setPlayModeState);
+        }
+        setHydrated(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const visibleColumnCount = MAX_PLAYERS_BY_MODE[playMode];
@@ -155,10 +204,10 @@ export const useGame = () => {
     ]
   );
 
-  const klasikOkeyDeductions = useMemo(
+  const klasikOkeyRounds = useMemo(
     () =>
       mode === 'klasik-okey'
-        ? computeKlasikOkeyDeductions(columns, specialFinishes, specialKafaVurma)
+        ? computeKlasikOkeyRounds(columns, specialFinishes, specialKafaVurma)
         : {},
     [mode, columns, specialFinishes, specialKafaVurma]
   );
@@ -292,8 +341,12 @@ export const useGame = () => {
       setColumns((prev) =>
         prev.map((c, idx) => {
           if (idx === colIdx) {
+            // Keep penalty and gösterge markers; only replace the finish line.
             const others = c.bottom.filter(
-              (e) => e.round !== round || e.marker === 'penalty'
+              (e) =>
+                e.round !== round ||
+                e.marker === 'penalty' ||
+                e.marker === 'gosterge'
             );
             const finishEntry: typeof c.bottom[number] = {
               value: 0,
@@ -332,6 +385,50 @@ export const useGame = () => {
     },
     [selection.column, viewingRound]
   );
+
+  // Klasik Okey "gösterge": at most one holder per round. Toggles the selected
+  // column; pressing it elsewhere moves the marker. Independent of the winner.
+  const markGosterge = useCallback(() => {
+    const colIdx = selection.column;
+    const round = viewingRound;
+    setColumns((prev) =>
+      prev.map((c, idx) => {
+        if (idx === colIdx) {
+          const has = c.bottom.some(
+            (e) => e.round === round && e.marker === 'gosterge'
+          );
+          if (has) {
+            return {
+              ...c,
+              bottom: c.bottom.filter(
+                (e) => !(e.round === round && e.marker === 'gosterge')
+              ),
+            };
+          }
+          const entry: typeof c.bottom[number] = {
+            value: 0,
+            round,
+            marker: 'gosterge',
+          };
+          return {
+            ...c,
+            bottom: insertInRoundOrder(c.bottom, [entry], round),
+          };
+        }
+        // remove gösterge from any other column (one per round)
+        const hadGosterge = c.bottom.some(
+          (e) => e.round === round && e.marker === 'gosterge'
+        );
+        if (!hadGosterge) return c;
+        return {
+          ...c,
+          bottom: c.bottom.filter(
+            (e) => !(e.round === round && e.marker === 'gosterge')
+          ),
+        };
+      })
+    );
+  }, [selection.column, viewingRound]);
 
   const markNotOpened = useCallback(() => {
     const colIdx = selection.column;
@@ -712,6 +809,52 @@ export const useGame = () => {
     [columns]
   );
 
+  // Persist the in-progress game on every change so it survives an app kill.
+  // Cleared automatically when the board is empty (reset / new / saved game).
+  useEffect(() => {
+    if (!hydrated) return;
+    if (isEmpty) {
+      AsyncStorage.removeItem(ACTIVE_GAME_KEY).catch(() => {});
+      return;
+    }
+    const snapshot = {
+      columns,
+      mode,
+      playMode,
+      playerNames,
+      maxRound,
+      viewingRound,
+      roundMultipliers,
+      specialFinishes,
+      specialKafaVurma,
+      targetRounds,
+      startValue,
+      lastRoundAlertShown,
+      gameEndPrompted,
+    };
+    AsyncStorage.setItem(ACTIVE_GAME_KEY, JSON.stringify(snapshot)).catch(
+      () => {}
+    );
+  }, [
+    hydrated,
+    isEmpty,
+    columns,
+    mode,
+    playMode,
+    playerNames,
+    maxRound,
+    viewingRound,
+    roundMultipliers,
+    specialFinishes,
+    specialKafaVurma,
+    targetRounds,
+    startValue,
+    lastRoundAlertShown,
+    gameEndPrompted,
+  ]);
+
+  const hasActiveGame = hydrated && !isEmpty;
+
   const currentCellHasInRound = useMemo(
     () => {
       const excludeMarkers: ('finished' | 'penalty' | 'not-opened')[] =
@@ -818,9 +961,11 @@ export const useGame = () => {
     acknowledgeGameEnd: useCallback(() => setGameEndPrompted(true), []),
     startValue,
     setStartValue,
-    klasikOkeyDeductions,
+    klasikOkeyRounds,
     finishKlasik: finish101,
+    markGosterge,
     dealerColumn,
+    hasActiveGame,
   };
 };
 

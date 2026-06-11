@@ -21,7 +21,12 @@ type LegacyBottom =
       marker?: BottomMarker;
     };
 
-const VALID_MARKERS: BottomMarker[] = ['finished', 'penalty', 'not-opened'];
+const VALID_MARKERS: BottomMarker[] = [
+  'finished',
+  'penalty',
+  'not-opened',
+  'gosterge',
+];
 
 type LegacyColumn = { top: LegacyTop[]; bottom: LegacyBottom[] };
 type LegacyGame = Omit<SavedGame, 'columns' | 'mode'> & {
